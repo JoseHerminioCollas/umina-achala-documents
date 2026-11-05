@@ -87,6 +87,12 @@ The token lifecycle relies on several key roles defined at creation. Each role g
   ensuring that non‑compliant tokens cannot circulate.  
   *Key association:* `wipeKey`
 
+- **Metadata Role**  
+  Can rewrite the metadata of any serial, including serials already sold. Set in the current code; see the conflict noted under [Metadata Policy](#metadata-policy-immutability).  
+  *Key association:* `metadataKey`
+
+Each of these keys keeps working on serials held by buyers. Pause, wipe and metadata keys are visible on marketplaces and explorers, and buyers can see them as a risk. A key that is not set at creation cannot be added later, and a key that is removed cannot be restored. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#what-ua-can-still-change-after-a-sale).
+
 ### Metadata Policy (Immutability)
 
 In the Umiña Achala compliance model, metadata is treated as the immutable **birth certificate** of each NFT.
@@ -96,6 +102,8 @@ In the Umiña Achala compliance model, metadata is treated as the immutable **bi
 
 - **No Metadata Key Assigned**  
   Since updates are not permitted, no `metadataKey` is defined at token creation. This enforces immutability at the protocol level and avoids confusion for auditors or marketplaces.
+
+  > **Conflict with the code.** `umina-achala-chain/src/uminaToken.js` currently **does** set a `metadataKey` (`METADATA_KEY`, or the admin key when that is not set). With it, UA can rewrite a serial's metadata after it is sold (HIP-657). **Decision not made yet:** remove the metadata key from token creation to match this policy, or change the policy. A key not set at creation cannot be added later. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#what-ua-can-still-change-after-a-sale).
 
 - **Compliance Integration**  
   Provenance attributes (e.g., `concession_id`, `vendor_ruc`, `hs_code`, `export_permit`) are embedded in the metadata at mint time. These values are immutable and form the NFT’s identity.
@@ -111,6 +119,8 @@ Every resale of an NFT automatically generates a royalty fee to ensure artisans 
 
 - **Royalty Percentage**  
   Defined by `.setNumerator(5)` and `.setDenominator(100)`, this enforces a **5% fee** on each secondary transfer of the NFT.
+
+  The royalty is charged only when HBAR or a fungible token moves in the same transaction as the NFT. Gifts and sales paid off-chain or in a separate transaction pay nothing, unless a fallback fee is set. The current token has no fallback fee. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
 
 - **Fee Collector**  
   Specified by `.setFeeCollectorAccountId(treasuryAccountId)`, the royalty is routed to the Treasury Account. The Treasury acts as the central vault, where funds can be redistributed to artisans, miners, or reinvested according to governance rules.

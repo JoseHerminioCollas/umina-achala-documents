@@ -94,7 +94,9 @@ The fallback fee is a fixed fee attached to the royalty. It is charged to the **
 
 The fallback fee does **not** affect sales on marketplaces such as SentX. Those sales are paid on-chain and pay the normal royalty.
 
-The current token definition has **no fallback fee**. One must be added to the `CustomRoyaltyFee` before the mainnet token is created.
+The fallback fee is a fixed amount, not a percentage. It cannot capture a price paid off-chain, and it is also charged on genuine gifts.
+
+The current token definition has **no fallback fee**. The Fee Schedule Key can add one after creation, as long as UA keeps that key. Adding it when the mainnet token is created avoids a period without one. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
 
 ## UA's Own Items (No Consignment)
 
@@ -340,7 +342,8 @@ new TopicMessageSubmitTransaction()
 
 - **Royalty and the split.** `UA_SHARE_BPS` gives UA 30% and the royalty is charged on top, so the merchant nets 66.5. Decision not made yet (see [Open Questions](#open-questions)). If UA's 30% is to include the royalty, `consignmentSplit` is the one place to change.
 - **Wallet signing.** The `.sign(merchantKey)` and `.sign(buyerKey)` calls stand in for wallets. In production UA builds and freezes the transaction, sends `tx.toBytes()` to the merchant's or buyer's wallet (for example HashPack through WalletConnect), and executes the signed result. Association also happens in the wallet.
-- **Listing watch.** `sellConsigned.js` checks the holder only at sale time. A mirror-node watch that removes listings once a serial leaves the merchant's account is not built.
+- **Listing watch.** `sellConsigned.js` checks the holder only at sale time. A mirror-node watch that removes listings once a serial leaves the merchant's account is not built. A proposed website ownership check is in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-sold-stones).
+- **Wallet-only sales.** No wallet screen can build the 70 / 30 sale, because UA must pay for and sign it as the allowance spender. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#ua-sales-what-can-happen-in-a-wallet).
 - **Fiat sales and the fallback fee.** Not handled. The token has no fallback fee yet, and how fiat buyers pay it is not decided.
 - **UA's own items.** No script sells an item straight from the Treasury (see [UA's Own Items](#uas-own-items-no-consignment)).
 - **Testnet only.** The scripts use `Client.forTestnet()` and `.env.testnet`. Mainnet support is not built.
