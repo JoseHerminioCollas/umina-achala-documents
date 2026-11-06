@@ -256,7 +256,7 @@ Run every command from `umina-achala-chain`. Each script takes `--dry-run`, whic
 
 ```bash
 # 1. Mint: prints the new serial, e.g. 7. The NFT is in the Treasury.
-node src/mint/mintNFT.js --form json/sample-form-post.json
+node src/mint/mintNFT.js --form json/sample-umina-form-post.json
 
 # 2. Consign: serial 7 moves to the merchant, UA may sell it, ISSUED_TO_OWNER is recorded.
 node src/consignment/consignToMerchant.js 7

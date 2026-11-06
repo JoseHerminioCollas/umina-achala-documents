@@ -300,6 +300,7 @@ Chain code is in `umina-achala-chain`. "On fork" means on the `main` branch of t
 | Recording sales made elsewhere and deliveries (`SALE`, `DELIVERED`) | `src/record/recordEvent.js` | On fork | [chain #8](https://github.com/umina-achala/umina-achala-chain/issues/8) |
 | Achala schema and mint: stone checks, `TRANSFORMATION` per stone | `schema/hip412-achala-schema.json`, `src/mint/achala.js`, `src/mint/mintNFT.js --token achala` | On branch | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
 | Selling an Achala with its Umiña NFTs (N+1 in one transfer) | none | Not built | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
+| Achala with many stones: accent stones without an NFT each | none | Not decided | [chain #23](https://github.com/umina-achala/umina-achala-chain/issues/23) |
 | Seller model (consignment or not) | | Open | [web #90](https://github.com/umina-achala/umina-achala-web/issues/90) |
 | Wallet connection and payment | none | Not built | [web #58](https://github.com/umina-achala/umina-achala-web/issues/58) |
 | Backend that signs UA's side of a sale | none | Not built | [web #116](https://github.com/umina-achala/umina-achala-web/issues/116) |
