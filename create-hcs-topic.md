@@ -20,7 +20,7 @@
   - [Status](#status)
   - [Code and Issue Reference](#code-and-issue-reference)
 
-> **Status: Phase 2 (testnet), in progress.** The code described here is on the `main` branch of the `umina-achala-chain` fork, not yet upstream, as of 2026-11-05; the rename to `createTopic.js` and the Achala events are on the `achala-token-mint` branch of the `umina-achala-chain` fork (not merged yet) (2026-11-06). No topic exists yet: `.env.testnet` still holds the placeholder `HCS_TOPIC_ID=0.0.1234`.
+> **Status: Phase 2 (testnet), in progress.** The code described here is on the `main` branch of the `umina-achala-chain` fork, not yet upstream, as of 2026-11-06, including the rename to `createTopic.js` and the Achala events. No topic exists yet: `.env.testnet` still holds the placeholder `HCS_TOPIC_ID=0.0.1234`.
 
 ## Purpose
 
@@ -217,11 +217,19 @@ What each script records in the provenance topic, as of 2026-11-06. Every event 
 
 Mounting and unmounting are recorded only in the Achala's own events (`MINT` and `BURN`); the stones get no events of their own (decided 2026-11-06).
 
+**Still to settle before mainnet**, since HCS messages cannot be changed once written (on testnet, a change after the run, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22), only means creating a fresh topic):
+
+- `stone_id` in every event: today only `COMPLIANCE` and `MINT` always carry it; `SALE`, `ISSUED_TO_OWNER`, `TRANSFER` and `BURN` name the item by `token_id` and serial only ([chain #25](https://github.com/umina-achala/umina-achala-chain/issues/25)).
+- `SALE` and `DELIVERED` for an Achala: `recordEvent.js` and the sale scripts handle the Umiña token only ([chain #26](https://github.com/umina-achala/umina-achala-chain/issues/26)).
+- Small fixes: a `COMPLIANCE` left with no `MINT` by a failed mint, `occurred_at` as the consensus time everywhere, the consignment event names ([chain #27](https://github.com/umina-achala/umina-achala-chain/issues/27)).
+
+A stone mounted in an Achala is refused only by the mint; the sale, consignment and burn scripts do not check it yet ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)).
+
 Planned, not recorded by any script yet: `TRANSFORMATION` (cutting or polishing), `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
 
 ## Status
 
-- The topic script is written and tested, on the fork's `main` as `createUminaTopic.js` ([chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9)), renamed `createTopic.js` on `achala-token-mint`, since the topics serve both token classes.
+- The topic script is written and tested, on the fork's `main` ([chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9)); renamed from `createUminaTopic.js` to `createTopic.js`, since the topics serve both token classes.
 - No topic exists yet. Topics and the token will be created by the project owner once all Phase 2A code is written.
 - Mainnet keys are not decided.
 

@@ -49,7 +49,7 @@ This guide defines the minting process for Umiña NFTs, covering lifecycle event
 
 ## Current Implementation (Phase 2 testnet)
 
-> As of 2026-11-06, on the `achala-token-mint` branch of the `umina-achala-chain` fork (not merged yet); the Umiña mint before the rename to `mintNFT.js` is on the fork's `main`. This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
+> As of 2026-11-06, on the `main` branch of the `umina-achala-chain` fork (not yet upstream). This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
 
 `node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]`
 

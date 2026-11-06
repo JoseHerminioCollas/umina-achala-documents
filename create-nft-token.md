@@ -274,7 +274,7 @@ Both are built by the same `buildTokenTransaction` (`umina-achala-chain/src/toke
 - **One owner per piece.** Several owners of one piece (each holding a stone NFT of it) is not supported: that suits real estate, not jewelry.
 - **Pieces with many stones:** an NFT for every stone does not scale; accent stones without an NFT each, or one Umiña per lot, are [chain #23](https://github.com/umina-achala/umina-achala-chain/issues/23), not decided yet.
 
-The Achala metadata schema and the mint (`mintNFT.js --token achala`) are written, on the `achala-token-mint` branch of the `umina-achala-chain` fork (not merged yet); see [mint-nft-token.md](mint-nft-token.md#minting-an-achala).
+The Achala metadata schema and the mint (`mintNFT.js --token achala`) are written, on the `main` branch of the `umina-achala-chain` fork (not yet upstream); see [mint-nft-token.md](mint-nft-token.md#minting-an-achala).
 
 ## Using the Keys After Creation
 
