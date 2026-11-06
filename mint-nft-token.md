@@ -1,6 +1,10 @@
 # Umiña NFT Minting Guide
 - [Umiña NFT Minting Guide](#umiña-nft-minting-guide)
   - [Overview](#overview)
+  - [Current Implementation (Phase 2 testnet)](#current-implementation-phase-2-testnet)
+    - [Steps](#steps)
+    - [Photos](#photos)
+    - [Metadata Rules](#metadata-rules)
   - [Individual Stone Lifecycle](#individual-stone-lifecycle)
     - [🛠️ Umiña Achala Minting Workflow (Summary)](#️-umiña-achala-minting-workflow-summary)
       - [Step 1: Prepare Compliance Payload (metadata)](#step-1-prepare-compliance-payload-metadata)
@@ -41,6 +45,55 @@
 
 ## Overview
 This guide defines the minting process for Umiña NFTs, covering lifecycle events, compliance automation, metadata standards, and export integration. Each stone undergoes a (Minting → Transformation → Sales/Export) lifecycle, notarized on Hedera Consensus Service (HCS) and minted via Hedera Token Service (HTS).
+
+## Current Implementation (Phase 2 testnet)
+
+> As of 2026-11-05, on the `main` branch of the `umina-achala-chain` fork (not yet upstream). This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
+
+`node src/mint/mintUminaNFT.js <metadata-file | --form post-file> [--out dir] [--force] [--dry-run | --images-only]`
+
+### Steps
+
+1. **Check, before anything leaves the machine:**
+   - the environment (Pinata key with file and JSON pinning, token, topic, supply key; not needed with `--images-only`)
+   - the photos (below)
+   - the metadata against the schema and the [rules](#metadata-rules)
+2. **Read the provenance topic** from the mirror node. Refuse if it does not exist, or if the `stone_id` already has a `MINT` event (unless `--force`) ([chain #20](https://github.com/umina-achala/umina-achala-chain/issues/20)).
+3. **Record `COMPLIANCE`** (stone type, RUC, concession, REINFO, HS code). Its transaction ID becomes `compliance_proof_hcs` in the metadata, which can only point to a message that already exists ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)). If this fails, nothing is pinned.
+4. **Make the image versions** in `generated/<stone_id>/` and **pin** them and the documents, then the metadata ([chain #7](https://github.com/umina-achala/umina-achala-chain/issues/7)).
+5. **Mint** under `UMINA_TOKEN_ID`, signed by the supply key; the NFT's on-chain metadata is the metadata's `ipfs://` URI.
+6. **Record `MINT`** with the mint transaction as `ref` ([chain #3](https://github.com/umina-achala/umina-achala-chain/issues/3), [#17](https://github.com/umina-achala/umina-achala-chain/issues/17)).
+
+If something fails after pinning, the pinned CIDs are listed so they can be unpinned; if `MINT` fails after the mint, the serials and URI are printed so it can be recorded by hand. `--dry-run` runs every check and lists the files it would make, writing nothing; `--images-only` also writes the images and prints the metadata it would pin, without pinning, minting or credentials.
+
+### Photos
+
+| | Rule |
+|---|---|
+| Fields | `main_image` (required) and `images` (up to 5 more), each `{ file, description }`; a photo listed twice is refused |
+| Accepted | JPEG, PNG or WebP, checked by the real file type; up to 25 MB and about 100 megapixels |
+| Refused | GIF, HEIC (export iPhone photos as JPEG), RAW |
+| Master, every photo | full size, the upload's format (JPEG and WebP at quality 95, PNG lossless); a `files[]` entry with its SHA-256 `checksum`; the main photo's master is the default file |
+| Display, main photo only | 1080 px on the long side, JPEG quality 82, never enlarged; becomes `image`, which wallets and marketplaces show |
+| Privacy | every version is turned upright and written **without EXIF, XMP or GPS**, so no location of a mine reaches IPFS |
+| Thumbnails | none: the web site and the mobile app fetch the masters and resize them as they need (decided 2026-11-05) |
+
+Receipts and permits go in `documents` (PDF or GLB) and are pinned as they are, as `files[]` entries after the masters.
+
+### Metadata Rules
+
+Checked by `src/mint/metadataValidator.js` against `schema/hip412-umina-schema.json`, which lives in `umina-achala-chain` (umina-achala-web keeps a copy; see [metadata.md](metadata.md#current-schema-2026-11-05)):
+
+- **Certified stones only** ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)): every provenance field is required.
+- **`stone_type`** must be an id from `schema/stone-types.json`: 40 curated types plus the 6,222 IMA-approved mineral species (imported from RRUFF by `src/mint/importIma.js`). There is no "other": a new type is added to the list first. Deprecated types are refused, and so are **fossils** (Ley 31204).
+- **`materials`** (optional) lists a multi-material specimen, such as quartz with gold: exactly one host, which is the `stone_type`.
+- **IDs** ([chain #5](https://github.com/umina-achala/umina-achala-chain/issues/5)):
+  - `vendor_ruc`: 11 digits, prefix 10, 15, 17 or 20, with SUNAT's check digit verified
+  - `reinfo_id`: REINFO is tracked by the miner's RUC, so this is a RUC with the same checks
+  - `mining_concession`: the INGEMMET Código Único, exactly 9 digits. Strict on purpose; the pattern is widened only after a different format is confirmed on the INGEMMET record.
+- **The `Stone Type`, `Materials` and `Form` attributes** are written from the list, replacing any typed by hand.
+- **Fields that change after the mint** (`reinfo_status`, `last_regulatory_check`, `sinceramiento_status`, `export_status`) record the state at the mint; later changes are HCS events. Custody (`current_location`) is no longer in the metadata.
+- The required fields are to be confirmed by the legal review ([web #111](https://github.com/umina-achala/umina-achala-web/issues/111)) before the first real mint, since metadata is immutable.
 
 ## Individual Stone Lifecycle
 ### 🛠️ Umiña Achala Minting Workflow (Summary)

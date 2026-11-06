@@ -4,6 +4,28 @@ This document defines the JSON metadata schema for Umiña NFTs, ensuring complia
 
 ---
 
+## Current Schema (2026-11-05)
+
+The schema is `schema/hip412-umina-schema.json` in **`umina-achala-chain`**, the source of truth; umina-achala-web keeps a copy, re-copied whenever the chain one changes. `json/example.json` there is a filled-in record. What changed from the field lists below ([chain #5](https://github.com/umina-achala/umina-achala-chain/issues/5), [#7](https://github.com/umina-achala/umina-achala-chain/issues/7), [#14](https://github.com/umina-achala/umina-achala-chain/issues/14)):
+
+| Field | Now |
+|---|---|
+| `image` | The **1080 px display version** of the main photo (JPEG): what wallets and marketplaces show |
+| `files[]` | One entry per **full-size photo master** (EXIF and GPS stripped), each with a SHA-256 `checksum`; the main photo's is `is_default_file`. Then the documents (receipts, permits). The web site and mobile app resize the masters themselves |
+| `properties.stone_id` | Required, `UMINA-YYYY-XX-NN` |
+| `properties.stone_type` | **New, required:** an id from `schema/stone-types.json` (curated types plus the IMA mineral species); no "other", no fossils |
+| `properties.materials` | **New, optional:** the materials of a multi-material specimen, `{ stone_type, role: host \| inclusion, form, weight_g }`, exactly one host |
+| `properties.specimen_form` | **New, required:** `natural`, `worked` or `crafted` |
+| `properties.vendor_ruc` | 11-digit RUC with a valid check digit |
+| `properties.reinfo_id` | The miner's RUC (REINFO is tracked by RUC), check digit verified |
+| `properties.mining_concession` | The 9-digit INGEMMET Código Único |
+| `properties.compliance_proof_hcs` | Set by the mint: the transaction ID of the `COMPLIANCE` event posted before pinning |
+| `reinfo_status`, `last_regulatory_check`, `sinceramiento_status`, `export_status` | The state **at mint**; later changes are HCS events |
+| `export_status.current_location` | **Removed:** custody is recorded by HCS events (`TRANSFER`, `DELIVERED`) |
+| Attributes `Stone Type`, `Materials`, `Form` | Written by the mint from the stone-type list, not by hand |
+
+The mint's input file names its photos in `main_image` and `images` and its documents in `documents`; these input-only fields are dropped from the pinned metadata. See [mint-nft-token.md](mint-nft-token.md#current-implementation-phase-2-testnet).
+
 ## Metadata Field Descriptions
 
 | Key | Type | Description |

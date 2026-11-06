@@ -12,6 +12,8 @@
   - [Token Creation (Hedera Token Service)](#token-creation-hedera-token-service)
   - [Provenance Registry (HCS)](#provenance-registry-hcs)
   - [Lifecycle Overview](#lifecycle-overview)
+  - [Token Classes: Umiña and Achala](#token-classes-umiña-and-achala)
+  - [Using the Keys After Creation](#using-the-keys-after-creation)
   - [Testnet Reference](#testnet-reference)
 
 
@@ -88,7 +90,7 @@ The token lifecycle relies on several key roles defined at creation. Each role g
   *Key association:* `wipeKey`
 
 - **Metadata Role**  
-  Can rewrite the metadata of any serial, including serials already sold. Set in the current code; see the conflict noted under [Metadata Policy](#metadata-policy-immutability).  
+  Can rewrite the metadata of any serial, including serials already sold. **Not set**, by decision and in the code ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)); see [Metadata Policy](#metadata-policy-immutability).  
   *Key association:* `metadataKey`
 
 Each of these keys keeps working on serials held by buyers. Pause, wipe and metadata keys are visible on marketplaces and explorers, and buyers can see them as a risk. A key that is not set at creation cannot be added later, and a key that is removed cannot be restored. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#what-ua-can-still-change-after-a-sale).
@@ -103,7 +105,7 @@ In the Umiña Achala compliance model, metadata is treated as the immutable **bi
 - **No Metadata Key Assigned**  
   Since updates are not permitted, no `metadataKey` is defined at token creation. This enforces immutability at the protocol level and avoids confusion for auditors or marketplaces.
 
-  > **Conflict with the code.** `umina-achala-chain/src/uminaToken.js` currently **does** set a `metadataKey` (`METADATA_KEY`, or the admin key when that is not set). With it, UA can rewrite a serial's metadata after it is sold (HIP-657). **Decision not made yet:** remove the metadata key from token creation to match this policy, or change the policy. A key not set at creation cannot be added later. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#what-ua-can-still-change-after-a-sale).
+  > **In the code** (2026-11-05, [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)): `buildTokenTransaction` in `umina-achala-chain/src/token/lib.js` sets no metadata key, and the tests check that none is set even when an old `METADATA_KEY` is left in the env file. A key left off at creation can never be added, so no serial's metadata can be changed. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#what-ua-can-still-change-after-a-sale).
 
 - **Compliance Integration**  
   Provenance attributes (e.g., `concession_id`, `vendor_ruc`, `hs_code`, `export_permit`) are embedded in the metadata at mint time. These values are immutable and form the NFT’s identity.
@@ -120,7 +122,7 @@ Every resale of an NFT automatically generates a royalty fee to ensure artisans 
 - **Royalty Percentage**  
   Defined by `.setNumerator(5)` and `.setDenominator(100)`, this enforces a **5% fee** on each secondary transfer of the NFT.
 
-  The royalty is charged only when HBAR or a fungible token moves in the same transaction as the NFT. Gifts and sales paid off-chain or in a separate transaction pay nothing, unless a fallback fee is set. The current token has no fallback fee. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
+  The royalty is charged only when HBAR or a fungible token moves in the same transaction as the NFT. Gifts and sales paid off-chain or in a separate transaction pay nothing, unless a fallback fee is set. A fallback fee of about USD 3 in HBAR is **decided and in the code** ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)): `buildRoyaltyFee` in `umina-achala-chain/src/token/lib.js` adds it from `FALLBACK_FEE_HBAR` (38 HBAR on testnet). The HBAR amount drifts against the dollar; `node src/token/adminToken.js fees --fallback-hbar <hbar>` updates it ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)). See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
 
 - **Fee Collector**  
   Specified by `.setFeeCollectorAccountId(treasuryAccountId)`, the royalty is routed to the Treasury Account. The Treasury acts as the central vault, where funds can be redistributed to artisans, miners, or reinvested according to governance rules.
@@ -134,6 +136,8 @@ In practice, this policy ensures that the economic value of each NFT continues t
 ## Token Creation (Hedera Token Service)
 
 Execute a token creation transaction to establish the Umiña collection.
+
+> **Simplified example.** The real transaction is built by `buildTokenTransaction` in `umina-achala-chain/src/token/lib.js`: it also sets the auto-renew account and adds the fallback fee to the royalty (`buildRoyaltyFee`), sets no metadata key, and takes the token class (Umiña or Achala).
 
 **Example (JavaScript SDK):**
 ```javascript
@@ -162,6 +166,8 @@ const transaction = new TokenCreateTransaction()
 ```
 
 ## Provenance Registry (HCS)
+
+> **Superseded.** The topics, their submit and admin keys, how they are created, and the current event format are in [create-hcs-topic.md](create-hcs-topic.md). The design changed from what this section describes: there are two topics (provenance and display), created separately from the token, each with a submit key; messages use the event envelope from [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10) (`event`, `schema_version`, `occurred_at`, `ref`, ...) rather than `event_type` and `data_hash`. This section is kept for its background until the end-of-session docs refresh.
 
 Along with the token creation, a Master Hedera Consensus Service (HCS) topic is established to serve as the registry for all Umiña NFTs. This registry ensures that compliance and provenance data remain immutable and auditable throughout the lifecycle of each stone.
 
@@ -244,9 +250,45 @@ The Umiña NFT lifecycle is designed to ensure compliance, provenance, and commu
 
 **Summary:** The lifecycle flows from token creation → immutable metadata → provenance registry → minting → royalties.
 
+## Token Classes: Umiña and Achala
+
+Decided 2026-10-31 ([chain #15](https://github.com/umina-achala/umina-achala-chain/issues/15)): jewelry gets its own token class, separate from stones, with its own name and symbol in wallets and its own metadata schema.
+
+| | Umiña | Achala |
+|---|---|---|
+| For | A single stone or mineral | A piece of jewelry set with Umiña stones |
+| Name, symbol | Umiña, `UMINA` | Achala, `ACHALA` |
+| Memo | Umiña Achala: Authentic Peruvian Stones and Minerals | Umiña Achala: Peruvian Jewelry Set with Certified Umiña Stones |
+| Env variable for its ID | `UMINA_TOKEN_ID` | `ACHALA_TOKEN_ID` |
+| Everything else | Shared: non-fungible, infinite supply, treasury, the five keys, **no metadata key**, 5% royalty with the HBAR fallback fee, auto-renew by the treasury | Same |
+
+Both are built by the same `buildTokenTransaction` (`umina-achala-chain/src/token/lib.js`, `TOKEN_CLASSES`), so the two classes cannot drift apart. The Achala royalty may later differ (an artisan share); until decided it is the Umiña one, and `adminToken.js fees --token achala` can change it.
+
+### Achala Pieces (decided 2026-11-05, [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16))
+
+- **At least one stone, always.** An Achala references the Umiña stones mounted in it; "metal only" jewelry is not an Achala.
+- **The buyer gets every NFT.** A sale moves the Achala and each Umiña mounted in it together (N+1 NFTs for N stones); the buyer is associated with both tokens.
+- **Disassembly burns the Achala.** When the jewelry is taken apart, the Achala NFT is burned (`adminToken.js burn` or `wipe`, `--token achala`), recorded as `BURN`, and each stone gets an HCS event (e.g. `UNMOUNTED`). **The Umiña NFTs are kept** and can be sold on their own again. A piece remade with other stones is a new Achala.
+
+The Achala metadata schema and mint script are [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16), not built yet.
+
+## Using the Keys After Creation
+
+`umina-achala-chain/src/token/adminToken.js <command> [--token umina|achala]` uses the admin keys ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)), each command signed by its own key:
+
+| Command | Key | Records |
+|---|---|---|
+| `fees --fallback-hbar <hbar> [--royalty <percent>]` | Fee Schedule | nothing (token-wide) |
+| `pause` / `unpause` | Pause | nothing (token-wide) |
+| `wipe <serial> --account <id> --reason <text>` | Wipe | `BURN` (`method: "wipe"`) |
+| `burn <serial> --reason <text>` | Supply | `BURN` (`method: "burn"`) |
+
+wipe and burn check the holder first; the reason is public and permanent, so no personal data.
+
 ## Testnet Reference
 
-- Current Testnet Token ID: `0.0.8130672`
+- **Creating a token:** `node src/token/createUminaToken.js [--token umina|achala] [--dry-run]` in `umina-achala-chain`. The project owner runs it; tokens and topics are created once all Phase 2A code is written (decided 2026-11-05), so **no current Umiña or Achala testnet token exists yet**.
+- The old token `0.0.8130672` ("Rumi Peruvian Gemstones", created 2026-03-08 by an earlier script, with a metadata key and no fallback fee) does not follow the current decisions and will not be used; whether to delete it is open on [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1).
 
 ---
 
