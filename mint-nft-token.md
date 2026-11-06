@@ -115,7 +115,7 @@ node src/mint/mintNFT.js --form json/sample-achala-form-post.json --token achala
 | `stone_id` | `ACHALA-YYYY-XX-NN`, e.g. `ACHALA-2026-RI-01` (the item ID; called `stone_id` like the Umiña one, since the HCS events key every item by it) |
 | `piece_type` | `ring`, `pendant`, `necklace`, `earrings`, `bracelet` or `brooch` |
 | `umina_token_id` | The Umiña token every stone is in, named once for the piece. The mint fills it from `UMINA_TOKEN_ID`, also in the file generated from a form post, and refuses any other value |
-| `stones` | 1 to 10 Umiña NFTs, each `{ stone_id, serial }` (a stone has no `token_id` of its own), each listed once |
+| `stones` | 1 to 9 Umiña NFTs (an Achala is sold with its stones in one transfer, at most 10 NFTs), each `{ stone_id, serial }` (a stone has no `token_id` of its own), each listed once |
 | `metals` | Optional. Each `{ stone_type, fineness, weight_g, source }`: `stone_type` must be a metal from the list; `source: "umina"` names one of the piece's stones in `stone_id` (e.g. a UA gold nugget), `source: "invoice"` needs the invoice in `documents` |
 | `technique`, `artisan_rna` | Required (how it was made; the artisan's Registro Nacional del Artesano) |
 | `hs_code`, `jurisdiction`, `legal_uri` | Required; jewelry of precious metal 7113.19 (silver 7113.11), of stones 7116.20, to confirm ([documents #1](https://github.com/umina-achala/umina-achala-documents/issues/1)) |
@@ -131,7 +131,7 @@ The mining fields (concession, REINFO) are on the Umiña stones, not on the Acha
 - **`MINT`:** adds `from_stone_ids`, which records the stones as mounted. The stones get no events of their own: the Achala's `MINT` mounts them and its `BURN` (the piece taken apart) unmounts them. If the `MINT` event fails, the script says the stones are not recorded as mounted.
 - **Attributes written from the data:** `Piece Type`, `Metal` (e.g. `Gold 18k`), `Stones` (each stone's type name, from its `COMPLIANCE` event), `Artisan`. Hand-written ones with these names are replaced.
 
-The largest `MINT` (10 stones) fits in one 1 KB HCS message; a test checks it.
+The largest `MINT` (9 stones) fits in one 1 KB HCS message; a test checks it.
 
 **Checking a file without minting:** `node src/mint/validateMetadata.js <file>` picks the Umiña or Achala schema from the `stone_id`. It counts `documents` as files, so a metal whose `source` is `invoice` passes when the invoice is attached, as in the mint.
 

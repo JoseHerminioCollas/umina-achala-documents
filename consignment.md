@@ -131,7 +131,7 @@ UA can also sell specimens it owns itself. This case does not depend on the cons
 
 Secondary sales and the fallback fee work the same in both cases ([Step 5](#step-5-secondary-sales-and-royalties), [Step 6](#step-6-fallback-fee)).
 
-**Code.** `src/sale/sellOwnItem.js <serial> <price-hbar>` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)) checks that the Treasury still holds the serial, then makes one atomic transfer and records `SALE`:
+**Code.** `src/sale/sellOwnItem.js <serial> <price-hbar>` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)) refuses a stone mounted in an Achala ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)), checks that the Treasury still holds the serial, then makes one atomic transfer and records `SALE`:
 
 ```js
 new TransferTransaction()
@@ -224,7 +224,7 @@ The flow above is implemented as testnet scripts in `umina-achala-chain/src`, to
 | Script | Step | What it does | Hedera calls | Signed by |
 |---|---|---|---|---|
 | `mint/mintNFT.js` | 1 | Mints a new serial to the Treasury: records `COMPLIANCE`, pins the photos and metadata, mints, records `MINT` (see [mint-nft-token.md](mint-nft-token.md#current-implementation-phase-2-testnet)) | `TopicMessageSubmitTransaction`, `TokenMintTransaction` | Supply key |
-| `consignment/associateToken.js` | 2, 4 | Associates the Umiña token with the merchant or buyer account | `TokenAssociateTransaction` | That account |
+| `consignment/associateToken.js` | 2, 4 | Associates a token (Umiña, or Achala with `--token achala`) with the merchant or buyer account | `TokenAssociateTransaction` | That account |
 | `consignment/consignToMerchant.js` | 2, 3 | Associates the merchant (skipped if already done), transfers the serial from the Treasury to the merchant, has the merchant grant UA an NFT allowance, and records `ISSUED_TO_OWNER` ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)) | `TokenAssociateTransaction`, `TransferTransaction`, `AccountAllowanceApproveTransaction`, `TopicMessageSubmitTransaction` | Merchant, Treasury, merchant |
 | `consignment/sellConsigned.js` | 4 | Checks the merchant still holds the serial, settles the 70 / 30 sale and the NFT transfer in one transaction, and records `SALE` | `TokenNftInfoQuery`, `TransferTransaction`, `TopicMessageSubmitTransaction` | UA (payer and allowance spender), buyer |
 | `consignment/endConsignment.js` | | Ends a consignment: checks the merchant holds the serial, the merchant revokes UA's allowance and returns the NFT to the Treasury, and `TRANSFER` (reason `consignment_ended`) is recorded. `--keep` only revokes the allowance and records nothing ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)) | `TokenNftInfoQuery`, `AccountAllowanceDeleteTransaction`, `TransferTransaction`, `TopicMessageSubmitTransaction` | Merchant |
