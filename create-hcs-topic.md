@@ -220,10 +220,9 @@ Mounting and unmounting are recorded only in the Achala's own events (`MINT` and
 **Still to settle before mainnet**, since HCS messages cannot be changed once written (on testnet, a change after the run, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22), only means creating a fresh topic):
 
 - `stone_id` in every event: today only `COMPLIANCE` and `MINT` always carry it; `SALE`, `ISSUED_TO_OWNER`, `TRANSFER` and `BURN` name the item by `token_id` and serial only ([chain #25](https://github.com/umina-achala/umina-achala-chain/issues/25)).
-- `SALE` and `DELIVERED` for an Achala: `recordEvent.js` and the sale scripts handle the Umiña token only ([chain #26](https://github.com/umina-achala/umina-achala-chain/issues/26)).
 - Small fixes: a `COMPLIANCE` left with no `MINT` by a failed mint, `occurred_at` as the consensus time everywhere, the consignment event names ([chain #27](https://github.com/umina-achala/umina-achala-chain/issues/27)).
 
-A stone mounted in an Achala is refused only by the mint; the sale, consignment and burn scripts do not check it yet ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)).
+Phase 2A code still to write: `SALE` and `DELIVERED` for an Achala, with its sale moving the Achala and its stones in one transfer (`recordEvent.js` and the sale scripts handle the Umiña token only, [chain #26](https://github.com/umina-achala/umina-achala-chain/issues/26)); and a stone mounted in an Achala is refused only by the mint, not yet by the sale, consignment and burn scripts ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)).
 
 Planned, not recorded by any script yet: `TRANSFORMATION` (cutting or polishing), `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
 

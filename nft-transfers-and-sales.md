@@ -299,12 +299,11 @@ Chain code is in `umina-achala-chain`. "On fork" means on the `main` branch of t
 | Atomic sale of UA's own item from the Treasury | `src/sale/sellOwnItem.js` | On fork | [chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19) |
 | Recording sales made elsewhere and deliveries (`SALE`, `DELIVERED`) | `src/record/recordEvent.js` | On fork | [chain #8](https://github.com/umina-achala/umina-achala-chain/issues/8) |
 | Achala schema and mint: stone checks, stones recorded in the Achala's `MINT` | `schema/hip412-achala-schema.json`, `src/mint/achala.js`, `src/mint/mintNFT.js --token achala` | On fork | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
-| Selling an Achala with its Umiña NFTs (N+1 in one transfer) | none | Not built | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
-| Achala with many stones: accent stones without an NFT each | none | Not decided | [chain #23](https://github.com/umina-achala/umina-achala-chain/issues/23) |
+| Selling an Achala with its Umiña NFTs (N+1 in one transfer), and its `SALE` and `DELIVERED` | none | Not built | [chain #26](https://github.com/umina-achala/umina-achala-chain/issues/26) |
+| Achala with many stones: accent stones without an NFT each | none | Not decided (Phase 2B) | [chain #23](https://github.com/umina-achala/umina-achala-chain/issues/23) |
 | Refuse selling, consigning or burning a stone mounted in an Achala | none (only the mint checks it) | Not built | [chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24) |
-| `stone_id` in every HCS event | none | Not built | [chain #25](https://github.com/umina-achala/umina-achala-chain/issues/25) |
-| `SALE` and `DELIVERED` for an Achala | none | Not built | [chain #26](https://github.com/umina-achala/umina-achala-chain/issues/26) |
-| Small HCS event fixes before mainnet | | Open | [chain #27](https://github.com/umina-achala/umina-achala-chain/issues/27) |
+| `stone_id` in every HCS event | none | Not built (Phase 2B, before mainnet) | [chain #25](https://github.com/umina-achala/umina-achala-chain/issues/25) |
+| Small HCS event fixes before mainnet | | Open (Phase 2B) | [chain #27](https://github.com/umina-achala/umina-achala-chain/issues/27) |
 | Seller model (consignment or not) | | Open | [web #90](https://github.com/umina-achala/umina-achala-web/issues/90) |
 | Wallet connection and payment | none | Not built | [web #58](https://github.com/umina-achala/umina-achala-web/issues/58) |
 | Backend that signs UA's side of a sale | none | Not built | [web #116](https://github.com/umina-achala/umina-achala-web/issues/116) |
