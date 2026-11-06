@@ -6,7 +6,7 @@ This document defines the JSON metadata schema for Umiña NFTs, ensuring complia
 
 ## Current Schema (2026-11-05)
 
-The schema is `schema/hip412-umina-schema.json` in **`umina-achala-chain`**, the source of truth; umina-achala-web keeps a copy, re-copied whenever the chain one changes. `json/example.json` there is a filled-in record. What changed from the field lists below ([chain #5](https://github.com/umina-achala/umina-achala-chain/issues/5), [#7](https://github.com/umina-achala/umina-achala-chain/issues/7), [#14](https://github.com/umina-achala/umina-achala-chain/issues/14)):
+The schema is `schema/hip412-umina-schema.json` in **`umina-achala-chain`**, the source of truth (Achala jewelry has its own, `schema/hip412-achala-schema.json`, described in [mint-nft-token.md](mint-nft-token.md#minting-an-achala)); umina-achala-web keeps a copy, re-copied whenever the chain one changes. `json/example.json` there is a filled-in record. What changed from the field lists below ([chain #5](https://github.com/umina-achala/umina-achala-chain/issues/5), [#7](https://github.com/umina-achala/umina-achala-chain/issues/7), [#14](https://github.com/umina-achala/umina-achala-chain/issues/14)):
 
 | Field | Now |
 |---|---|

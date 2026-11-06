@@ -5,6 +5,7 @@
     - [Steps](#steps)
     - [Photos](#photos)
     - [Metadata Rules](#metadata-rules)
+    - [Minting an Achala](#minting-an-achala)
   - [Individual Stone Lifecycle](#individual-stone-lifecycle)
     - [🛠️ Umiña Achala Minting Workflow (Summary)](#️-umiña-achala-minting-workflow-summary)
       - [Step 1: Prepare Compliance Payload (metadata)](#step-1-prepare-compliance-payload-metadata)
@@ -48,9 +49,11 @@ This guide defines the minting process for Umiña NFTs, covering lifecycle event
 
 ## Current Implementation (Phase 2 testnet)
 
-> As of 2026-11-05, on the `main` branch of the `umina-achala-chain` fork (not yet upstream). This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
+> As of 2026-11-06, on the `achala-token-mint` branch of the `umina-achala-chain` fork (not merged yet); the Umiña mint before the rename to `mintNFT.js` is on the fork's `main`. This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
 
-`node src/mint/mintUminaNFT.js <metadata-file | --form post-file> [--out dir] [--force] [--dry-run | --images-only]`
+`node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]`
+
+One script mints both token classes, as `createToken.js` creates both: an Umiña (a stone) by default, an Achala (jewelry) with `--token achala`. Metadata of the other class is refused by its `stone_id`, with a hint to give `--token`.
 
 ### Steps
 
@@ -61,8 +64,10 @@ This guide defines the minting process for Umiña NFTs, covering lifecycle event
 2. **Read the provenance topic** from the mirror node. Refuse if it does not exist, or if the `stone_id` already has a `MINT` event (unless `--force`) ([chain #20](https://github.com/umina-achala/umina-achala-chain/issues/20)).
 3. **Record `COMPLIANCE`** (stone type, RUC, concession, REINFO, HS code). Its transaction ID becomes `compliance_proof_hcs` in the metadata, which can only point to a message that already exists ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)). If this fails, nothing is pinned.
 4. **Make the image versions** in `generated/<stone_id>/` and **pin** them and the documents, then the metadata ([chain #7](https://github.com/umina-achala/umina-achala-chain/issues/7)).
-5. **Mint** under `UMINA_TOKEN_ID`, signed by the supply key; the NFT's on-chain metadata is the metadata's `ipfs://` URI.
+5. **Mint** under `UMINA_TOKEN_ID` (an Achala: `ACHALA_TOKEN_ID`), signed by the supply key; the NFT's on-chain metadata is the metadata's `ipfs://` URI.
 6. **Record `MINT`** with the mint transaction as `ref` ([chain #3](https://github.com/umina-achala/umina-achala-chain/issues/3), [#17](https://github.com/umina-achala/umina-achala-chain/issues/17)).
+
+An Achala adds a stone check after step 2 and `TRANSFORMATION` events after step 6; see [Minting an Achala](#minting-an-achala).
 
 If something fails after pinning, the pinned CIDs are listed so they can be unpinned; if `MINT` fails after the mint, the serials and URI are printed so it can be recorded by hand. `--dry-run` runs every check and lists the files it would make, writing nothing; `--images-only` also writes the images and prints the metadata it would pin, without pinning, minting or credentials.
 
@@ -94,6 +99,39 @@ Checked by `src/mint/metadataValidator.js` against `schema/hip412-umina-schema.j
 - **The `Stone Type`, `Materials` and `Form` attributes** are written from the list, replacing any typed by hand.
 - **Fields that change after the mint** (`reinfo_status`, `last_regulatory_check`, `sinceramiento_status`, `export_status`) record the state at the mint; later changes are HCS events. Custody (`current_location`) is no longer in the metadata.
 - The required fields are to be confirmed by the legal review ([web #111](https://github.com/umina-achala/umina-achala-web/issues/111)) before the first real mint, since metadata is immutable.
+
+### Minting an Achala
+
+[chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16). An Achala is a piece of jewelry made of one or more Umiña NFTs (see [Achala Pieces](create-nft-token.md#achala-pieces-chain-16-decided-2026-11-05-updated-2026-11-06)).
+
+```bash
+node src/mint/mintNFT.js --form json/sample-achala-form-post.json --token achala --dry-run
+```
+
+**Schema:** `schema/hip412-achala-schema.json` (template `json/achala-template.json`, example `json/achala-example.json`).
+
+| Field | Rule |
+|---|---|
+| `stone_id` | `ACHALA-YYYY-XX-NN`, e.g. `ACHALA-2026-RI-01` (the item ID; called `stone_id` like the Umiña one, since the HCS events key every item by it) |
+| `piece_type` | `ring`, `pendant`, `necklace`, `earrings`, `bracelet` or `brooch` |
+| `stones` | 1 to 10 Umiña NFTs, each `{ stone_id, serial, token_id }`, each listed once. The form gives `stone_id` and `serial`; `token_id` is filled with `UMINA_TOKEN_ID` |
+| `metals` | Optional. Each `{ stone_type, fineness, weight_g, source }`: `stone_type` must be a metal from the list; `source: "umina"` names one of the piece's stones in `stone_id` (e.g. a UA gold nugget), `source: "invoice"` needs the invoice in `documents` |
+| `technique`, `artisan_rna` | Required (how it was made; the artisan's Registro Nacional del Artesano) |
+| `hs_code`, `jurisdiction`, `legal_uri` | Required; jewelry of precious metal 7113.19 (silver 7113.11), of stones 7116.20, to confirm ([documents #1](https://github.com/umina-achala/umina-achala-documents/issues/1)) |
+| `vendor_ruc` | Required, check digit verified as for an Umiña |
+
+The mining fields (concession, REINFO) are on the Umiña stones, not on the Achala.
+
+**Extra steps for an Achala:**
+
+- **Environment:** also `ACHALA_TOKEN_ID`, plus `UMINA_TOKEN_ID` and `TREASURY_ID` to check the stones.
+- **Stone check, before anything is posted** (`--force` does not skip it): each stone is in the Umiña token, has a `MINT` event with that `stone_id` and serial, exists and is not burned (mirror node), is **held by the treasury**, and is not mounted in another Achala that still exists (a `TRANSFORMATION` to an Achala serial with no `BURN`).
+- **`COMPLIANCE`:** `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids`.
+- **`MINT`:** adds `from_stone_ids`.
+- **`TRANSFORMATION`, one per stone, after `MINT`:** envelope of the Umiña (`stone_id`, Umiña `token_id`, its serial), `ref` the Achala mint transaction; `kind: "mounted"`, `from_stone_ids`, `to_stone_id`, `to_token_id`, `to_serial`. If one fails, the stones still missing it are printed.
+- **Attributes written from the data:** `Piece Type`, `Metal` (e.g. `Gold 18k`), `Stones` (each stone's type name, from its `COMPLIANCE` event), `Artisan`. Hand-written ones with these names are replaced.
+
+The largest `MINT` (10 stones) fits in one 1 KB HCS message; a test checks it.
 
 ## Individual Stone Lifecycle
 ### 🛠️ Umiña Achala Minting Workflow (Summary)

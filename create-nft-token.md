@@ -256,21 +256,22 @@ Decided 2026-10-31 ([chain #15](https://github.com/umina-achala/umina-achala-cha
 
 | | Umiña | Achala |
 |---|---|---|
-| For | A single stone or mineral | A piece of jewelry set with Umiña stones |
+| For | A single stone (a gold nugget is a stone) | A piece of jewelry made of one or more Umiña stones |
 | Name, symbol | Umiña, `UMINA` | Achala, `ACHALA` |
-| Memo | Umiña Achala: Authentic Peruvian Stones and Minerals | Umiña Achala: Peruvian Jewelry Set with Certified Umiña Stones |
+| Memo | Umiña: Peruvian stones | Achala: Peruvian jewelry made of Umiña stones |
 | Env variable for its ID | `UMINA_TOKEN_ID` | `ACHALA_TOKEN_ID` |
 | Everything else | Shared: non-fungible, infinite supply, treasury, the five keys, **no metadata key**, 5% royalty with the HBAR fallback fee, auto-renew by the treasury | Same |
 
 Both are built by the same `buildTokenTransaction` (`umina-achala-chain/src/token/lib.js`, `TOKEN_CLASSES`), so the two classes cannot drift apart. The Achala royalty may later differ (an artisan share); until decided it is the Umiña one, and `adminToken.js fees --token achala` can change it.
 
-### Achala Pieces (decided 2026-11-05, [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16))
+### Achala Pieces ([chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16), decided 2026-11-05, updated 2026-11-06)
 
-- **At least one stone, always.** An Achala references the Umiña stones mounted in it; "metal only" jewelry is not an Achala.
-- **The buyer gets every NFT.** A sale moves the Achala and each Umiña mounted in it together (N+1 NFTs for N stones); the buyer is associated with both tokens.
-- **Disassembly burns the Achala.** When the jewelry is taken apart, the Achala NFT is burned (`adminToken.js burn` or `wipe`, `--token achala`), recorded as `BURN`, and each stone gets an HCS event (e.g. `UNMOUNTED`). **The Umiña NFTs are kept** and can be sold on their own again. A piece remade with other stones is a new Achala.
+- **An Achala is one or more Umiña NFTs.** It lists the Umiña stones it is made of, and the Umiña NFTs are associated with it: its `MINT` event names them, and each gets a `TRANSFORMATION` event (`kind: "mounted"`) naming the Achala.
+- **A stone can be gold.** A gold nugget is a stone, so it can be an Umiña. A gold piece is either an Umiña itself or an Achala made of a gold Umiña. The gold or silver of an Achala comes from one of its Umiña stones or from an invoice in its documents.
+- **The buyer gets every NFT.** A sale moves the Achala and each Umiña mounted in it together (N+1 NFTs for N stones); the buyer is associated with both tokens. *Not built yet: the sale scripts move one serial.*
+- **Taking a piece apart burns the Achala** (`adminToken.js burn` or `wipe`, `--token achala`), recorded as `BURN`. **The Umiña NFTs are kept**: once their Achala is burned, they can be mounted in a new Achala or sold on their own. No separate per-stone `UNMOUNTED` event is recorded; the Achala's `BURN` is what frees its stones.
 
-The Achala metadata schema and mint script are [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16), not built yet.
+The Achala metadata schema and the mint (`mintNFT.js --token achala`) are written, on the `achala-token-mint` branch of the `umina-achala-chain` fork (not merged yet); see [mint-nft-token.md](mint-nft-token.md#minting-an-achala).
 
 ## Using the Keys After Creation
 
@@ -287,7 +288,7 @@ wipe and burn check the holder first; the reason is public and permanent, so no 
 
 ## Testnet Reference
 
-- **Creating a token:** `node src/token/createUminaToken.js [--token umina|achala] [--dry-run]` in `umina-achala-chain`. The project owner runs it; tokens and topics are created once all Phase 2A code is written (decided 2026-11-05), so **no current Umiña or Achala testnet token exists yet**.
+- **Creating a token:** `node src/token/createToken.js [env-file] [--token umina|achala] [--dry-run]` in `umina-achala-chain` (`--token=achala` works too; an unknown class or option is refused before anything is read). The project owner runs it; tokens and topics are created once all Phase 2A code is written (decided 2026-11-05), so **no current Umiña or Achala testnet token exists yet**.
 - The old token `0.0.8130672` ("Rumi Peruvian Gemstones", created 2026-03-08 by an earlier script, with a metadata key and no fallback fee) does not follow the current decisions and will not be used; whether to delete it is open on [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1).
 
 ---

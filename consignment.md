@@ -104,7 +104,7 @@ UA can also sell specimens it owns itself. This case does not depend on the cons
 
 **Flow**
 
-1. UA mints the NFT (`src/mint/mintUminaNFT.js`). The serial goes to the Treasury, as in [Step 1](#step-1-mint-to-treasury).
+1. UA mints the NFT (`src/mint/mintNFT.js`; an Achala with `--token achala`). The serial goes to the Treasury, as in [Step 1](#step-1-mint-to-treasury).
 2. The item is listed on Umiña Achala. No allowance is needed, because UA holds the NFT.
 3. The buyer associates the Umiña token.
 4. The sale settles as one atomic transfer. The Treasury signs, because it sends the NFT; the buyer signs, because HBAR leaves their account.
@@ -223,7 +223,7 @@ The flow above is implemented as testnet scripts in `umina-achala-chain/src`, to
 
 | Script | Step | What it does | Hedera calls | Signed by |
 |---|---|---|---|---|
-| `mint/mintUminaNFT.js` | 1 | Mints a new serial to the Treasury: records `COMPLIANCE`, pins the photos and metadata, mints, records `MINT` (see [mint-nft-token.md](mint-nft-token.md#current-implementation-phase-2-testnet)) | `TopicMessageSubmitTransaction`, `TokenMintTransaction` | Supply key |
+| `mint/mintNFT.js` | 1 | Mints a new serial to the Treasury: records `COMPLIANCE`, pins the photos and metadata, mints, records `MINT` (see [mint-nft-token.md](mint-nft-token.md#current-implementation-phase-2-testnet)) | `TopicMessageSubmitTransaction`, `TokenMintTransaction` | Supply key |
 | `consignment/associateToken.js` | 2, 4 | Associates the Umiña token with the merchant or buyer account | `TokenAssociateTransaction` | That account |
 | `consignment/consignToMerchant.js` | 2, 3 | Associates the merchant (skipped if already done), transfers the serial from the Treasury to the merchant, has the merchant grant UA an NFT allowance, and records `ISSUED_TO_OWNER` ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)) | `TokenAssociateTransaction`, `TransferTransaction`, `AccountAllowanceApproveTransaction`, `TopicMessageSubmitTransaction` | Merchant, Treasury, merchant |
 | `consignment/sellConsigned.js` | 4 | Checks the merchant still holds the serial, settles the 70 / 30 sale and the NFT transfer in one transaction, and records `SALE` | `TokenNftInfoQuery`, `TransferTransaction`, `TopicMessageSubmitTransaction` | UA (payer and allowance spender), buyer |
@@ -248,7 +248,7 @@ UA is the operator account (`OPERATOR_ID`) in every script, so it pays all trans
    BUYER_KEY=…
    ```
 
-3. Create the token and the provenance topic, and set `UMINA_TOKEN_ID` and `HCS_TOPIC_ID` to their real IDs (`node src/token/createUminaToken.js`, `node src/topic/createUminaTopic.js provenance`; see [create-hcs-topic.md](create-hcs-topic.md)). Make sure `TREASURY_ID`, `SUPPLY_KEY` and `HCS_SUBMIT_KEY` are set. Until the topic exists, minting is refused on purpose.
+3. Create the token and the provenance topic, and set `UMINA_TOKEN_ID` and `HCS_TOPIC_ID` to their real IDs (`node src/token/createToken.js`, `node src/topic/createTopic.js provenance`; see [create-hcs-topic.md](create-hcs-topic.md)). Make sure `TREASURY_ID`, `SUPPLY_KEY` and `HCS_SUBMIT_KEY` are set. Until the topic exists, minting is refused on purpose.
 
 Run every command from `umina-achala-chain`. Each script takes `--dry-run`, which checks the arguments and environment and sends nothing.
 
@@ -256,7 +256,7 @@ Run every command from `umina-achala-chain`. Each script takes `--dry-run`, whic
 
 ```bash
 # 1. Mint: prints the new serial, e.g. 7. The NFT is in the Treasury.
-node src/mint/mintUminaNFT.js --form json/sample-form-post.json
+node src/mint/mintNFT.js --form json/sample-form-post.json
 
 # 2. Consign: serial 7 moves to the merchant, UA may sell it, ISSUED_TO_OWNER is recorded.
 node src/consignment/consignToMerchant.js 7

@@ -20,7 +20,7 @@
   - [Status](#status)
   - [Code and Issue Reference](#code-and-issue-reference)
 
-> **Status: Phase 2 (testnet), in progress.** The code described here is on the `main` branch of the `umina-achala-chain` fork, not yet upstream, as of 2026-11-05. No topic exists yet: `.env.testnet` still holds the placeholder `HCS_TOPIC_ID=0.0.1234`.
+> **Status: Phase 2 (testnet), in progress.** The code described here is on the `main` branch of the `umina-achala-chain` fork, not yet upstream, as of 2026-11-05; the rename to `createTopic.js` and the Achala events are on the `achala-token-mint` branch of the `umina-achala-chain` fork (not merged yet) (2026-11-06). No topic exists yet: `.env.testnet` still holds the placeholder `HCS_TOPIC_ID=0.0.1234`.
 
 ## Purpose
 
@@ -97,7 +97,7 @@ random 256-bit number ──▶ private key (HCS_SUBMIT_KEY, kept secret in .env
 2. **From a secure random source.** For example: the Hedera SDK (`PrivateKey.generateECDSA()`, below), a wallet that can export a private key (such as HashPack), or `openssl ecparam -name secp256k1 -genkey` converted to hex. Never a key made up by hand, and never one from a website that generates keys: anyone who has seen the private key can post events to the topic.
 3. **In a format the scripts read:** DER hex or raw hex, as in the table above.
 
-The key is then used like this: the private key goes in `.env.testnet` and never leaves the machine; `createUminaTopic.js` sets its public key on the new topic; from then on the scripts sign each event with the private key, and the network accepts only messages whose signature matches. The topic stays tied to that key: switching to a different submit key later means updating the topic with the admin key, not just changing `.env.testnet`.
+The key is then used like this: the private key goes in `.env.testnet` and never leaves the machine; `createTopic.js` sets its public key on the new topic; from then on the scripts sign each event with the private key, and the network accepts only messages whose signature matches. The topic stays tied to that key: switching to a different submit key later means updating the topic with the admin key, not just changing `.env.testnet`.
 
 **Getting one.** Either:
 
@@ -135,19 +135,19 @@ Run from `umina-achala-chain`. Creating a topic writes to Hedera, so the project
 2. Check the settings without sending anything:
 
    ```bash
-   node src/topic/createUminaTopic.js provenance --dry-run
+   node src/topic/createTopic.js provenance --dry-run
    ```
 
 3. Create the provenance topic:
 
    ```bash
-   node src/topic/createUminaTopic.js provenance
+   node src/topic/createTopic.js provenance
    ```
 
 4. Save the printed ID in `.env.testnet` as `HCS_TOPIC_ID`.
 5. Repeat with `display` when the display topic is needed, and save it as `HCS_DISPLAY_TOPIC_ID`.
 
-The full usage is `node src/topic/createUminaTopic.js <provenance|display> [env-file] [--force] [--dry-run]`. The env file defaults to `.env.testnet`.
+The full usage is `node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]`. The env file defaults to `.env.testnet`.
 
 ### What the Script Checks
 
@@ -203,23 +203,24 @@ How a missing topic is detected: the testnet mirror node answers `200` with an e
 
 ## Event Catalog
 
-What each script records in the provenance topic, as of 2026-11-05. Every event has the [envelope](#event-messages); the catalog itself is kept on [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
+What each script records in the provenance topic, as of 2026-11-06. Every event has the [envelope](#event-messages); the catalog itself is kept on [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
 
 | Event | Recorded by | When | Event fields | `ref` |
 |---|---|---|---|---|
-| `COMPLIANCE` | `mint/mintUminaNFT.js` | Before the metadata is pinned; its transaction ID becomes `compliance_proof_hcs` in the metadata ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)). `serials` is `[]` | `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code` | |
-| `MINT` | `mint/mintUminaNFT.js` | After the mint | `ipfs_cid` | the mint transaction |
+| `COMPLIANCE` | `mint/mintNFT.js` | Before the metadata is pinned; its transaction ID becomes `compliance_proof_hcs` in the metadata ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)). `serials` is `[]` | Umiña: `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code`. Achala: `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids` | |
+| `MINT` | `mint/mintNFT.js` | After the mint | `ipfs_cid`; an Achala adds `from_stone_ids` | the mint transaction |
+| `TRANSFORMATION` | `mint/mintNFT.js --token achala` | After an Achala's `MINT`, one per Umiña stone in it; the envelope is the stone's ([chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16)) | `kind: "mounted"`, `from_stone_ids`, `to_stone_id`, `to_token_id`, `to_serial` | the Achala mint |
 | `ISSUED_TO_OWNER` | `consignment/consignToMerchant.js` | After the transfer to the merchant and the allowance | `to_id`, `allowance_ref` | the transfer |
 | `SALE` | `consignment/sellConsigned.js`, `sale/sellOwnItem.js`, `record/recordEvent.js sale` | After an on-chain sale, or to record one made elsewhere (checked on the mirror node; a second `SALE` for the same `ref` is refused) | `seller_id`, `buyer_id`, `payment`, `sold_for`, `currency`, optional `payment_ref`; the consigned sale adds the split in tinybars | the transfer that moved the NFT |
 | `DELIVERED` | `record/recordEvent.js delivered` | The buyer has the piece (in person so far) | `buyer_id`, `method`, `delivered_at`, `proof` (`signed` or `none`), `proof_hash` when signed | the `SALE`'s transaction |
 | `TRANSFER` | `consignment/endConsignment.js` | An unsold consigned item goes back to the Treasury | `from_id`, `to_id`, `reason: "consignment_ended"` | the return transfer |
-| `BURN` | `token/adminToken.js wipe` / `burn` | A serial is wiped from a holder or burned in the Treasury; also the Achala of a disassembled piece | `reason`, `method`, `from_id` for wipe | the wipe or burn |
+| `BURN` | `token/adminToken.js wipe` / `burn` | A serial is wiped from a holder or burned in the Treasury; also the Achala of a piece taken apart, which frees its stones to be mounted again | `reason`, `method`, `from_id` for wipe | the wipe or burn |
 
-Planned, not recorded by any script yet: `UNMOUNTED` (a stone taken out of a disassembled Achala, [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16)), `TRANSFORMATION`, `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
+Planned, not recorded by any script yet: `TRANSFORMATION` for cutting or polishing (only `mounted` is recorded), `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
 
 ## Status
 
-- `createUminaTopic.js` is written and tested, on the fork's `main` ([chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9)).
+- The topic script is written and tested, on the fork's `main` as `createUminaTopic.js` ([chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9)), renamed `createTopic.js` on `achala-token-mint`, since the topics serve both token classes.
 - No topic exists yet. Topics and the token will be created by the project owner once all Phase 2A code is written.
 - Mainnet keys are not decided.
 
@@ -229,7 +230,7 @@ Code is in `umina-achala-chain`.
 
 | Topic | Code | Issue |
 |---|---|---|
-| Create a topic | `src/topic/createUminaTopic.js` | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
+| Create a topic | `src/topic/createTopic.js` | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
 | Topic env checks, transaction, existing-topic check | `src/topic/lib.js` (`validateTopicEnv`, `buildTopicTransaction`, `existingTopicProblem`) | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
 | Mirror node lookups | `src/mirror.js` (`topicInfo`, `topicEvents`) | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20) |
 | Event envelope, submit-key signing, receipt | `src/hcs.js` (`buildEvent`, `submitEvent`, `submitKeyProblem`) | [chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17) |

@@ -47,15 +47,15 @@ Some properties can never change after creation:
 - Token type (non-fungible), supply type (infinite) and decimals.
 - Any key that was **not** set at creation. As far as we know, HTS does not allow adding one later (see [To Verify on Testnet](consignment.md#to-verify-on-testnet)). The current token has no KYC key and no freeze key.
 
-The token is built in `buildTokenTransaction` (`umina-achala-chain/src/token/lib.js`) and created by `src/token/createUminaToken.js`. There are two token classes with the same rules: Umiña for stones and Achala for jewelry (`--token achala`, [chain #15](https://github.com/umina-achala/umina-achala-chain/issues/15)). Decisions on them are in [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1) and [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6).
+The token is built in `buildTokenTransaction` (`umina-achala-chain/src/token/lib.js`) and created by `src/token/createToken.js`. There are two token classes with the same rules: Umiña for stones and Achala for jewelry (`--token achala`, [chain #15](https://github.com/umina-achala/umina-achala-chain/issues/15)). Decisions on them are in [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1) and [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6).
 
 Everything else can be changed later by the matching key, as long as UA keeps that key. A key can also be removed permanently, which locks that property for good.
 
 ### Minting: How Much Can Vary
 
-Different mint scripts can vary **only the serial's metadata**: at most 100 bytes, in UA's case an IPFS URI that points to the metadata JSON (`TokenMintTransaction().setMetadata(...)` in `umina-achala-chain/src/mint/mintUminaNFT.js`). The JSON can differ from stone to stone (gem type, certificates, images, schema version).
+Different mint scripts can vary **only the serial's metadata**: at most 100 bytes, in UA's case an IPFS URI that points to the metadata JSON (`TokenMintTransaction().setMetadata(...)` in `umina-achala-chain/src/mint/mintNFT.js`, which mints both classes). The JSON can differ from stone to stone (gem type, certificates, images, schema version).
 
-Everything else is token-wide and the same for every serial: royalty, fallback fee, fee collector and keys. A mint script cannot give one serial a different royalty. A class of stones that needs different on-chain rules needs a **separate token**, as planned for Achala jewelry ([chain #15](https://github.com/umina-achala/umina-achala-chain/issues/15)).
+Everything else is token-wide and the same for every serial: royalty, fallback fee, fee collector and keys. A mint script cannot give one serial a different royalty. A class of items that needs different on-chain rules needs a **separate token**, as done for Achala jewelry ([chain #15](https://github.com/umina-achala/umina-achala-chain/issues/15)).
 
 ### What UA Can Still Change After a Sale
 
@@ -280,16 +280,16 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 
 ## Code and Issue Reference
 
-Chain code is in `umina-achala-chain`. "On fork" means on the `main` branch of the fork (origin), not yet on upstream `umina-achala/umina-achala-chain`, whose `main` is still the initial import; an issue closes only when its work reaches upstream. State as of 2026-11-05.
+Chain code is in `umina-achala-chain`. "On fork" means on the `main` branch of the fork (origin), not yet on upstream `umina-achala/umina-achala-chain`, whose `main` is still the initial import; an issue closes only when its work reaches upstream. State as of 2026-11-06; "On branch" means on the fork's `achala-token-mint` branch, not merged yet.
 
 | Topic | Code | Status | Issue |
 |---|---|---|---|
-| Token classes, keys, royalty and fallback fee | `src/token/lib.js` (`TOKEN_CLASSES`, `buildTokenTransaction`, `buildRoyaltyFee`), `src/token/createUminaToken.js [--token umina\|achala]` | On fork | [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [#15](https://github.com/umina-achala/umina-achala-chain/issues/15) (Achala: committed on branch `achala-token-mint`) |
+| Token classes, keys, royalty and fallback fee | `src/token/lib.js` (`TOKEN_CLASSES`, `buildTokenTransaction`, `buildRoyaltyFee`), `src/token/createToken.js [--token umina\|achala]` | On fork | [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [#15](https://github.com/umina-achala/umina-achala-chain/issues/15) (Achala: on branch) |
 | Fee update, pause, wipe, burn | `src/token/adminToken.js` | On fork | [chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21) |
-| HCS topics with submit and admin keys | `src/topic/createUminaTopic.js`, `src/topic/lib.js` | On fork | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
+| HCS topics with submit and admin keys | `src/topic/createTopic.js`, `src/topic/lib.js` | On fork (renamed from `createUminaTopic.js` on branch) | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
 | Event envelope, submit-key signing, receipt check | `src/hcs.js` (`buildEvent`, `submitEvent`) | On fork | [chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17), [#10](https://github.com/umina-achala/umina-achala-chain/issues/10) |
 | Mirror node reads (topic events, transactions, NFT holder, account key) | `src/mirror.js` | On fork | [chain #8](https://github.com/umina-achala/umina-achala-chain/issues/8), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20) |
-| Mint: pin, mint, `COMPLIANCE` and `MINT` events, duplicate `stone_id` check | `src/mint/mintUminaNFT.js`, `src/mint/lib.js` | On fork | [chain #3](https://github.com/umina-achala/umina-achala-chain/issues/3), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20) |
+| Mint: pin, mint, `COMPLIANCE` and `MINT` events, duplicate `stone_id` check | `src/mint/mintNFT.js`, `src/mint/lib.js` | On fork (as `mintUminaNFT.js`; renamed `mintNFT.js` on branch) | [chain #3](https://github.com/umina-achala/umina-achala-chain/issues/3), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20) |
 | Photos: master per photo, 1080 px display version for `image`, EXIF stripped | `src/mint/images.js` | On fork | [chain #7](https://github.com/umina-achala/umina-achala-chain/issues/7) |
 | Stone types, certified-only rules, RUC / REINFO / concession checks | `schema/stone-types.json`, `src/mint/stoneTypes.js`, `src/mint/metadataValidator.js`, `src/mint/importIma.js` | On fork | [chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14), [#5](https://github.com/umina-achala/umina-achala-chain/issues/5) |
 | Association | `src/consignment/lib.js` (`associateToken`), `src/consignment/associateToken.js` | On fork | |
@@ -298,7 +298,8 @@ Chain code is in `umina-achala-chain`. "On fork" means on the `main` branch of t
 | Consigned 70 / 30 sale with `SALE` event | `src/consignment/sellConsigned.js` | On fork | |
 | Atomic sale of UA's own item from the Treasury | `src/sale/sellOwnItem.js` | On fork | [chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19) |
 | Recording sales made elsewhere and deliveries (`SALE`, `DELIVERED`) | `src/record/recordEvent.js` | On fork | [chain #8](https://github.com/umina-achala/umina-achala-chain/issues/8) |
-| Achala schema and mint | none | Not built; decisions made | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
+| Achala schema and mint: stone checks, `TRANSFORMATION` per stone | `schema/hip412-achala-schema.json`, `src/mint/achala.js`, `src/mint/mintNFT.js --token achala` | On branch | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
+| Selling an Achala with its Umiña NFTs (N+1 in one transfer) | none | Not built | [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16) |
 | Seller model (consignment or not) | | Open | [web #90](https://github.com/umina-achala/umina-achala-web/issues/90) |
 | Wallet connection and payment | none | Not built | [web #58](https://github.com/umina-achala/umina-achala-web/issues/58) |
 | Backend that signs UA's side of a sale | none | Not built | [web #116](https://github.com/umina-achala/umina-achala-web/issues/116) |
