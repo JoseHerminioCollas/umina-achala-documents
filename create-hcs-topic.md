@@ -208,15 +208,16 @@ What each script records in the provenance topic, as of 2026-11-06. Every event 
 | Event | Recorded by | When | Event fields | `ref` |
 |---|---|---|---|---|
 | `COMPLIANCE` | `mint/mintNFT.js` | Before the metadata is pinned; its transaction ID becomes `compliance_proof_hcs` in the metadata ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)). `serials` is `[]` | Umiña: `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code`. Achala: `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids` | |
-| `MINT` | `mint/mintNFT.js` | After the mint | `ipfs_cid`; an Achala adds `from_stone_ids` | the mint transaction |
-| `TRANSFORMATION` | `mint/mintNFT.js --token achala` | After an Achala's `MINT`, one per Umiña stone in it; the envelope is the stone's ([chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16)) | `kind: "mounted"`, `from_stone_ids`, `to_stone_id`, `to_token_id`, `to_serial` | the Achala mint |
+| `MINT` | `mint/mintNFT.js` | After the mint | `ipfs_cid`; an Achala adds `from_stone_ids`, which records its stones as mounted ([chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16)) | the mint transaction |
 | `ISSUED_TO_OWNER` | `consignment/consignToMerchant.js` | After the transfer to the merchant and the allowance | `to_id`, `allowance_ref` | the transfer |
 | `SALE` | `consignment/sellConsigned.js`, `sale/sellOwnItem.js`, `record/recordEvent.js sale` | After an on-chain sale, or to record one made elsewhere (checked on the mirror node; a second `SALE` for the same `ref` is refused) | `seller_id`, `buyer_id`, `payment`, `sold_for`, `currency`, optional `payment_ref`; the consigned sale adds the split in tinybars | the transfer that moved the NFT |
 | `DELIVERED` | `record/recordEvent.js delivered` | The buyer has the piece (in person so far) | `buyer_id`, `method`, `delivered_at`, `proof` (`signed` or `none`), `proof_hash` when signed | the `SALE`'s transaction |
 | `TRANSFER` | `consignment/endConsignment.js` | An unsold consigned item goes back to the Treasury | `from_id`, `to_id`, `reason: "consignment_ended"` | the return transfer |
-| `BURN` | `token/adminToken.js wipe` / `burn` | A serial is wiped from a holder or burned in the Treasury; also the Achala of a piece taken apart, which frees its stones to be mounted again | `reason`, `method`, `from_id` for wipe | the wipe or burn |
+| `BURN` | `token/adminToken.js wipe` / `burn` | A serial is wiped from a holder or burned in the Treasury; also the Achala of a piece taken apart: its `BURN` unmounts its stones (their Umiña NFTs are not burned), which can be mounted again | `reason`, `method`, `from_id` for wipe | the wipe or burn |
 
-Planned, not recorded by any script yet: `TRANSFORMATION` for cutting or polishing (only `mounted` is recorded), `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
+Mounting and unmounting are recorded only in the Achala's own events (`MINT` and `BURN`); the stones get no events of their own (decided 2026-11-06).
+
+Planned, not recorded by any script yet: `TRANSFORMATION` (cutting or polishing), `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
 
 ## Status
 

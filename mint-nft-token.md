@@ -67,7 +67,7 @@ One script mints both token classes, as `createToken.js` creates both: an Umiña
 5. **Mint** under `UMINA_TOKEN_ID` (an Achala: `ACHALA_TOKEN_ID`), signed by the supply key; the NFT's on-chain metadata is the metadata's `ipfs://` URI.
 6. **Record `MINT`** with the mint transaction as `ref` ([chain #3](https://github.com/umina-achala/umina-achala-chain/issues/3), [#17](https://github.com/umina-achala/umina-achala-chain/issues/17)).
 
-An Achala adds a stone check after step 2 and `TRANSFORMATION` events after step 6; see [Minting an Achala](#minting-an-achala).
+An Achala adds a stone check after step 2, and its `MINT` lists its stones; see [Minting an Achala](#minting-an-achala).
 
 If something fails after pinning, the pinned CIDs are listed so they can be unpinned; if `MINT` fails after the mint, the serials and URI are printed so it can be recorded by hand. `--dry-run` runs every check and lists the files it would make, writing nothing; `--images-only` also writes the images and prints the metadata it would pin, without pinning, minting or credentials.
 
@@ -126,10 +126,9 @@ The mining fields (concession, REINFO) are on the Umiña stones, not on the Acha
 **Extra steps for an Achala:**
 
 - **Environment:** also `ACHALA_TOKEN_ID`, plus `UMINA_TOKEN_ID` and `TREASURY_ID` to check the stones. A `umina_token_id` other than `UMINA_TOKEN_ID` is refused before the mirror node is read, also on `--dry-run`.
-- **Stone check, before anything is posted** (`--force` does not skip it): each stone is in the Umiña token, has a `MINT` event with that `stone_id` and serial, exists and is not burned (mirror node), is **held by the treasury**, and is not mounted in another Achala that still exists (a `TRANSFORMATION` to an Achala serial with no `BURN`).
+- **Stone check, before anything is posted** (`--force` does not skip it): each stone is in the Umiña token, has a `MINT` event with that `stone_id` and serial, exists and is not burned (mirror node), is **held by the treasury**, and is not mounted in another Achala that still exists (listed in the `from_stone_ids` of an Achala `MINT` whose serial has no `BURN`).
 - **`COMPLIANCE`:** `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids`.
-- **`MINT`:** adds `from_stone_ids`.
-- **`TRANSFORMATION`, one per stone, after `MINT`:** envelope of the Umiña (`stone_id`, Umiña `token_id`, its serial), `ref` the Achala mint transaction; `kind: "mounted"`, `from_stone_ids`, `to_stone_id`, `to_token_id`, `to_serial`. If one fails, the stones still missing it are printed.
+- **`MINT`:** adds `from_stone_ids`, which records the stones as mounted. The stones get no events of their own: the Achala's `MINT` mounts them and its `BURN` (the piece taken apart) unmounts them. If the `MINT` event fails, the script says the stones are not recorded as mounted.
 - **Attributes written from the data:** `Piece Type`, `Metal` (e.g. `Gold 18k`), `Stones` (each stone's type name, from its `COMPLIANCE` event), `Artisan`. Hand-written ones with these names are replaced.
 
 The largest `MINT` (10 stones) fits in one 1 KB HCS message; a test checks it.

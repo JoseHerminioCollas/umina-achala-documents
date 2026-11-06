@@ -266,10 +266,11 @@ Both are built by the same `buildTokenTransaction` (`umina-achala-chain/src/toke
 
 ### Achala Pieces ([chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16), decided 2026-11-05, updated 2026-11-06)
 
-- **An Achala is one or more Umiña NFTs.** It lists the Umiña stones it is made of, and the Umiña NFTs are associated with it: its `MINT` event names them, and each gets a `TRANSFORMATION` event (`kind: "mounted"`) naming the Achala.
+- **An Achala is one or more Umiña NFTs.** It lists the Umiña stones it is made of, and the Umiña NFTs are associated with it: its `MINT` event names them (`from_stone_ids`), which records them as mounted.
 - **A stone can be gold.** A gold nugget is a stone, so it can be an Umiña. A gold piece is either an Umiña itself or an Achala made of a gold Umiña. The gold or silver of an Achala comes from one of its Umiña stones or from an invoice in its documents.
 - **The buyer gets every NFT.** A sale moves the Achala and each Umiña mounted in it together (N+1 NFTs for N stones); the buyer is associated with both tokens. *Not built yet: the sale scripts move one serial.*
-- **Taking a piece apart burns the Achala** (`adminToken.js burn` or `wipe`, `--token achala`), recorded as `BURN`. **The Umiña NFTs are kept**: once their Achala is burned, they can be mounted in a new Achala or sold on their own. No separate per-stone `UNMOUNTED` event is recorded; the Achala's `BURN` is what frees its stones.
+- **Taking a piece apart burns the Achala** (`adminToken.js burn` or `wipe`, `--token achala`), recorded as `BURN`. **The Umiña NFTs are kept**: once their Achala is burned, they can be mounted in a new Achala or sold on their own. The Achala's `BURN` unmounts its stones.
+- **The stones get no events of their own** (decided 2026-11-06). Mounting and unmounting are recorded in the Achala's HCS events, its `MINT` and its `BURN`; there is no per-stone `TRANSFORMATION` or `UNMOUNTED` event.
 - **One owner per piece.** Several owners of one piece (each holding a stone NFT of it) is not supported: that suits real estate, not jewelry.
 - **Pieces with many stones:** an NFT for every stone does not scale; accent stones without an NFT each, or one Umiña per lot, are [chain #23](https://github.com/umina-achala/umina-achala-chain/issues/23), not decided yet.
 
