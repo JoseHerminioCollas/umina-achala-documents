@@ -94,6 +94,7 @@ Checked by `src/mint/metadataValidator.js` against `schema/hip412-umina-schema.j
 - **`materials`** (optional) lists a multi-material specimen, such as quartz with gold: exactly one host, which is the `stone_type`.
 - **IDs** ([chain #5](https://github.com/umina-achala/umina-achala-chain/issues/5)):
   - `vendor_ruc`: 11 digits, prefix 10, 15, 17 or 20, with SUNAT's check digit verified
+- **Seller** ([chain #31](https://github.com/umina-achala/umina-achala-chain/issues/31)): `vendor_name` is required, the seller's name next to its RUC. `creator` is the seller or the artisan, as the merchant chooses; the form's `creator` field sets it, and without one it stays "Umiña Achala". Both are public and permanent. They are not copied into the `COMPLIANCE` event.
   - `reinfo_id`: REINFO is tracked by the miner's RUC, so this is a RUC with the same checks
   - `mining_concession`: the INGEMMET Código Único, exactly 9 digits. Strict on purpose; the pattern is widened only after a different format is confirmed on the INGEMMET record.
 - **The `Stone Type`, `Materials` and `Form` attributes** are written from the list, replacing any typed by hand.
@@ -119,7 +120,7 @@ node src/mint/mintNFT.js --form json/sample-achala-form-post.json --token achala
 | `metals` | Optional. Each `{ stone_type, fineness, weight_g, source }`: `stone_type` must be a metal from the list; `source: "umina"` names one of the piece's stones in `stone_id` (e.g. a UA gold nugget), `source: "invoice"` needs the invoice in `documents` |
 | `technique`, `artisan_rna` | Required (how it was made; the artisan's Registro Nacional del Artesano) |
 | `hs_code`, `jurisdiction`, `legal_uri` | Required; jewelry of precious metal 7113.19 (silver 7113.11), of stones 7116.20, to confirm ([documents #1](https://github.com/umina-achala/umina-achala-documents/issues/1)) |
-| `vendor_ruc` | Required, check digit verified as for an Umiña |
+| `vendor_name`, `vendor_ruc` | Required; the RUC's check digit verified as for an Umiña |
 
 The mining fields (concession, REINFO) are on the Umiña stones, not on the Achala.
 

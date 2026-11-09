@@ -48,6 +48,11 @@ From [web #90](https://github.com/umina-achala/umina-achala-web/issues/90). They
 - **Ownership.** The merchant owns the item 100%. UA mints it; the NFT (for an Achala, the Achala and every stone in it) goes to the merchant's wallet, and the merchant keeps the physical item.
 - **Artisan.** The merchant pays the artisan separately for the labor of making a piece. The artisan is not a party to the sale and gets no share in the sale transfer.
 - **Where the merchant may sell.** Anywhere, by default: on UA's site, through a wallet or SentX, or off chain.
+- **UA sells its own items and merchants' items.** UA holds its own items (the NFT stays in the Treasury until sold); a merchant holds theirs.
+- **How UA sells.** On its site: the buyer pays from their wallet, and UA's backend builds the transaction and signs UA's side ([nft-transfers-and-sales.md](nft-transfers-and-sales.md#sale-options), Option 1).
+- **Seller in the metadata.** The merchant's name and RUC go in the NFT metadata, which is public and permanent. `creator` names the seller or the artisan, as the merchant chooses.
+- **Taking a piece apart.** Only the merchant who owns an Achala may take it apart. UA then burns the Achala NFT at the merchant's request; the stones' NFTs are kept.
+- **No KYC key** on the token, so buyers can resell freely on SentX and other marketplaces (2026-11-09; confirm before the mainnet token is created).
 
 | Where it sells | What UA receives |
 |---|---|
@@ -57,7 +62,7 @@ From [web #90](https://github.com/umina-achala/umina-achala-web/issues/90). They
 
 The merchant signs an agreement with these terms when an item is placed with UA: see the example in [consignment-agreement.md](consignment-agreement.md).
 
-Still open: who may take a listed Achala apart, and how the royalty and fallback fee apply when an Achala moves with its stones (to check on testnet, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)).
+Still open: how the royalty and fallback fee apply when an Achala moves with its stones (to check on testnet, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)).
 
 ## Flow on Hedera
 
@@ -94,7 +99,7 @@ With HBAR payment, the sale settles as one atomic transfer:
 
 **Royalty interaction.** HTS calculates the royalty on the fungible value received by the **NFT sender**, which here is the merchant. **Decided (2026-11-09): UA's 30% includes the royalty.** The transfer pays the merchant `70 / 0.95` of the price and UA the rest; HTS then moves 5% of the merchant's leg to the Treasury, so the merchant ends with exactly 70 and UA with 30.
 
-**Code to change.** The testnet code (`consignmentSplit` in `src/consignment/lib.js`, used by `sellConsigned.js`) still charges the royalty on top: it pays the merchant 70, and HTS then takes 3.5 of it, leaving 66.5. The change is [chain #30](https://github.com/umina-achala/umina-achala-chain/issues/30).
+**Code.** `consignmentSplit` in `src/consignment/lib.js` (used by `sellConsigned.js`) sets the legs this way, taking the rate from `ROYALTY`; the merchant's leg is rounded up, so any rounding remainder goes to the merchant ([chain #30](https://github.com/umina-achala/umina-achala-chain/issues/30), on branch `seller-model`). It assumes HTS rounds the royalty down; to check on testnet.
 
 **Fiat payment.** If the buyer pays off-chain (card, bank transfer), no fungible value moves with the NFT. HTS then charges the **fallback fee** to the buyer as the receiver. The buyer needs HBAR in their account and must sign the transaction. That is friction for buyers who don't use crypto, and the checkout design has to account for it.
 
@@ -193,7 +198,7 @@ As far as we know, HTS does not allow adding a key that the token was not create
 
 | Decision | Current state | Must decide before mainnet | Status |
 |---|---|---|---|
-| KYC key | Not set | Yes | Decision not made yet |
+| KYC key | Not set | Yes | **Decided (2026-11-09):** none, so resales are free; confirm before mainnet |
 | Freeze key | Not set | Yes | Decision not made yet |
 | Fallback fee | Set in the code from `FALLBACK_FEE_HBAR` | Recommended | **Decided and built:** about USD 3 in HBAR ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)) |
 | Metadata key | Not set | Yes | **Decided and built:** none ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)) |
@@ -207,11 +212,11 @@ As far as we know, HTS does not allow adding a key that the token was not create
 - UA's 30% includes the 5% royalty.
 - No exclusive listing window: the merchant may sell anywhere.
 - The fallback fee is about USD 3 in HBAR ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)).
+- Buyers may resell freely: no KYC key.
+- Only the merchant may take their Achala apart.
 
 **Decision not made yet:**
-- Should buyers be able to resell freely on SentX and other marketplaces? If yes, do not set a KYC key.
 - How will fiat buyers on UA's site pay the fallback fee, or will UA pay it on their behalf?
-- Who may take a listed Achala apart?
 
 ## Direction
 
@@ -365,7 +370,7 @@ buildEvent(
 
 ### Review: Gaps Before Mainnet
 
-- **Royalty and the split.** `UA_SHARE_BPS` gives UA 30% and the royalty is charged on top, so the merchant nets 66.5. **Decided (2026-11-09):** UA's 30% includes the royalty; `consignmentSplit` is the one place to change ([chain #30](https://github.com/umina-achala/umina-achala-chain/issues/30)).
+- **Royalty and the split.** Decided (2026-11-09): UA's 30% includes the royalty. `consignmentSplit` sets the legs so the merchant ends with 70% ([chain #30](https://github.com/umina-achala/umina-achala-chain/issues/30), on branch `seller-model`).
 - **Wallet signing.** The `.sign(merchantKey)` and `.sign(buyerKey)` calls stand in for wallets. In production UA builds and freezes the transaction, sends `tx.toBytes()` to the merchant's or buyer's wallet (for example HashPack through WalletConnect), and executes the signed result. Association also happens in the wallet.
 - **Listing watch.** `sellConsigned.js` checks the holder only at sale time. A mirror-node watch that removes listings once a serial leaves the merchant's account is not built. A proposed website ownership check is in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-sold-stones) ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)).
 - **Wallet-only sales.** No wallet screen can build the 70 / 30 sale, because UA must pay for and sign it as the allowance spender. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#ua-sales-what-can-happen-in-a-wallet); the backend that would sign UA's side is [web #116](https://github.com/umina-achala/umina-achala-web/issues/116).

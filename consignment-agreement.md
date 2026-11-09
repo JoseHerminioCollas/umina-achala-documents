@@ -32,7 +32,7 @@ The Merchant asks UA to mint NFTs on the Hedera network for the items listed in 
 
 3.2 The Merchant's Hedera account must be associated with the Umiña token and, for jewelry, the Achala token, before UA can send the NFTs.
 
-3.3 NFT metadata is permanent once minted and cannot be corrected. The Merchant checks the item data in Annex A before minting.
+3.3 NFT metadata is permanent once minted and cannot be corrected. It includes the Merchant's name and RUC. The Merchant chooses whether the NFT's creator is the Merchant or the artisan (`[Merchant / artisan name]`), and checks the item data in Annex A before minting.
 
 3.4 `[Who pays the network fee or fallback fee, if one is charged when UA sends the NFTs to the Merchant: UA / the Merchant.]` **(open: to verify on testnet, chain #22)**
 
@@ -78,7 +78,7 @@ Amounts are computed in the coin's smallest unit; any rounding remainder goes to
 
 7.1 An Achala and the stones mounted in it are sold and transferred together. The Merchant does not transfer the NFT of a mounted stone on its own.
 
-7.2 If a piece is taken apart, the Merchant asks UA to burn the Achala NFT; the stones' NFTs are kept and can be sold on their own. `[Who may take apart a piece while it is listed.]` **(open: #90)**
+7.2 Only the Merchant may take apart a piece they own. Before doing so, the Merchant withdraws it from sale on UA's website and asks UA to burn the Achala NFT; the stones' NFTs are kept and can be sold on their own.
 
 7.3 The Merchant pays the artisan who made the piece for the labor, separately from this agreement. The artisan receives no share of any sale, and UA has no obligation to the artisan.
 
@@ -97,7 +97,7 @@ If a warranty proves false, UA may remove the listing and record the problem on 
 
 9.1 Hedera transactions and UA's provenance messages are public and permanent. They show account IDs, NFT serials and amounts, and cannot be deleted.
 
-9.2 UA does not put the Merchant's name, address, email or other personal data in those records. `[Whether the Merchant's name or RUC appears in the NFT metadata.]` **(open: #90 M3)**
+9.2 The Merchant's name and RUC are written into each item's NFT metadata, which is public and permanent; the Merchant agrees to this. UA does not put the Merchant's address, email or other personal data in those records.
 
 9.3 UA handles the Merchant's personal data as described in its privacy policy.
 

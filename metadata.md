@@ -16,6 +16,7 @@ The schema is `schema/hip412-umina-schema.json` in **`umina-achala-chain`**, the
 | `properties.stone_type` | **New, required:** an id from `schema/stone-types.json` (curated types plus the IMA mineral species); no "other", no fossils |
 | `properties.materials` | **New, optional:** the materials of a multi-material specimen, `{ stone_type, role: host \| inclusion, form, weight_g }`, exactly one host |
 | `properties.specimen_form` | **New, required:** `natural`, `worked` or `crafted` |
+| `properties.vendor_name` | **New, required:** the seller's name (the merchant, or Umiña Achala for its own items); public and permanent ([chain #31](https://github.com/umina-achala/umina-achala-chain/issues/31)) |
 | `properties.vendor_ruc` | 11-digit RUC with a valid check digit |
 | `properties.reinfo_id` | The miner's RUC (REINFO is tracked by RUC), check digit verified |
 | `properties.mining_concession` | The 9-digit INGEMMET Código Único |
@@ -31,7 +32,7 @@ The mint's input file names its photos in `main_image` and `images` and its docu
 | Key | Type | Description |
 | :--- | :--- | :--- |
 | `name` | String | Public identifier (e.g., "Umiña Stone #003 - Chrysocolla"). |
-| `creator` | String | Project or mining/artisanal entity. |
+| `creator` | String | The seller or the artisan, as the merchant chooses; "Umiña Achala" for UA's own items. Set from the mint form ([chain #31](https://github.com/umina-achala/umina-achala-chain/issues/31)). |
 | `description` | String | Narrative of provenance, geology, and compliance. |
 | `image` | URI | Immutable IPFS link to the primary visual asset. |
 | `type` | String | MIME type of the media (e.g., `image/jpg`). |
@@ -51,6 +52,7 @@ The `properties` object contains compliance‑critical fields:
 - **`hs_code`** → Harmonized System Code (`7103.99.00.00`).  
 - **`jurisdiction`** → Country of origin (`Peru`).  
 - **`legal_uri`** → Project legal reference (`https://umina-achala.pe/`).  
+- **`vendor_name`** → Seller's name (`Umiña Achala`).  
 - **`vendor_ruc`** → SUNAT tax ID (`20999887766`).  
 - **`artisan_rna`** → MINCETUR RNA number (`RNA-112233`).  
 - **`mining_concession`** → Concession ID (`Arequipa-Chrys-03`).  

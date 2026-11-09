@@ -158,7 +158,7 @@ UA does **not** receive a royalty on every transfer. HTS charges the royalty onl
 A consigned sale (`sellConsigned.js`) is one atomic transaction that:
 
 - takes the price in HBAR from the buyer,
-- splits it so the merchant ends with 70% and UA with 30%, the royalty included (decided 2026-11-09; the code still adds the royalty on top),
+- splits it so the merchant ends with 70% and UA with 30%, the royalty included (decided 2026-11-09, [chain #30](https://github.com/umina-achala/umina-achala-chain/issues/30)),
 - moves the NFT from the merchant to the buyer, using the allowance the merchant gave UA.
 
 Hedera requires the payer of an allowance transfer to be the spender, so UA must pay for and sign the transaction, and the buyer signs too. Wallet interfaces only offer a plain Send. No wallet screen can build this transaction, so something has to build it and hand it to the wallets to sign.
@@ -171,7 +171,7 @@ Hedera requires the payer of an allowance transfer to be the spender, so UA must
 | **2. List on SentX** | The NFT is listed and bought on SentX. No UA code | SentX pays the seller, so UA's 30% does not happen automatically. UA receives only the royalty. No HCS record |
 | **3. Manual wallet transfers** | The buyer sends HBAR, then the holder sends the NFT | No code, but not atomic: one side trusts the other. The split is not enforced. No HCS record |
 
-**Recommended:** Option 1. **Decision not made yet.**
+**Decided (2026-11-09):** Option 1 ([web #90](https://github.com/umina-achala/umina-achala-web/issues/90)).
 
 What Option 1 needs:
 
@@ -276,7 +276,6 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 **Decision not made yet:**
 
 - Separate keys or multi-signature for mainnet ([chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)).
-- How UA sells: site plus wallet (Option 1), SentX, or manual wallet transfers. See [Sale Options](#sale-options).
 - Where the Treasury key lives if UA sells from a wallet.
 - Whether the website uses the ownership check, the display topic, or both ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)).
 
