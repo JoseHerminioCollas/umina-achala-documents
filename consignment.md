@@ -26,9 +26,9 @@
 
 ## Overview
 
-> **Status: Phase 2 (testnet), in progress. Decision not made yet** ([web #90](https://github.com/umina-achala/umina-achala-web/issues/90)). The testnet code is in `umina-achala-chain` (fork `main`, 2026-11-05). UA has not decided whether it will take merchant items on consignment at all. This document describes how consignment would work if UA does, so the option can be evaluated and tested on testnet.
+> **Status: Phase 2 (testnet), in progress. Seller model decided 2026-11-09** ([web #90](https://github.com/umina-achala/umina-achala-web/issues/90)): the merchant owns the item, holds its NFT and the physical item, and may sell it anywhere; UA takes 30% only when it sells on UA's site. See [Decisions (2026-11-09)](#decisions-2026-11-09). The testnet code is in `umina-achala-chain` (fork `main`).
 
-If UA takes items on consignment, Umiña Achala (UA) sells specimens for merchants. Each specimen is represented by an NFT serial in the Umiña collection on the Hedera Token Service (HTS). The merchant holds the NFT in their own wallet. UA lists the item for sale and takes a commission when the item first sells. After that, UA earns a royalty every time the item is resold.
+Umiña Achala (UA) sells specimens for merchants. Each specimen is represented by an NFT serial in the Umiña collection on the Hedera Token Service (HTS). The merchant holds the NFT in their own wallet. UA lists the item for sale and takes a commission when the item first sells. After that, UA earns a royalty every time the item is resold.
 
 This document describes the intended flow and the Hedera mechanics behind each step. It also covers how merchants listing on third-party marketplaces such as SentX affect the model, and which decisions must be made before the mainnet token is created.
 
@@ -37,9 +37,25 @@ This document describes the intended flow and the Hedera mechanics behind each s
 1. UA mints an NFT for the merchant's specimen.
 2. The merchant receives the NFT and sees it in their wallet.
 3. The item is listed for sale on Umiña Achala.
-4. The item sells on Umiña Achala. Payment is split **70% to the merchant, 30% to UA**.
+4. The item sells on Umiña Achala. The merchant ends with **70%** and UA with **30%**, the royalty included.
 5. The buyer resells the item. UA receives a **royalty** on each resale.
 6. A **fallback fee** applies when the NFT changes hands without on-chain payment.
+
+## Decisions (2026-11-09)
+
+From [web #90](https://github.com/umina-achala/umina-achala-web/issues/90). They apply to a merchant's Umiña and to a merchant's Achala (a piece of jewelry) with its stones.
+
+- **Ownership.** The merchant owns the item 100%. UA mints it; the NFT (for an Achala, the Achala and every stone in it) goes to the merchant's wallet, and the merchant keeps the physical item.
+- **Artisan.** The artisan is paid separately for the labor of making a piece. The artisan is not a party to the sale and gets no share in the sale transfer.
+- **Where the merchant may sell.** Anywhere, by default: on UA's site, through a wallet or SentX, or off chain.
+
+| Where it sells | What UA receives |
+|---|---|
+| UA's site | 30% of the price, the 5% royalty included: the merchant ends with exactly 70% ([Step 4](#step-4-primary-sale-70--30-split)) |
+| Wallet transfer or SentX, paid on chain | The 5% royalty, automatically |
+| Off chain (cash, in person) | The merchant sends the NFT to the buyer with no payment, so the buyer pays the fallback fee (about USD 3 in HBAR) for each NFT moved |
+
+Still open: who may take a listed Achala apart, and how the royalty and fallback fee apply when an Achala moves with its stones (to check on testnet, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)).
 
 ## Flow on Hedera
 
@@ -68,16 +84,15 @@ With HBAR payment, the sale settles as one atomic transfer:
 
 | Movement | Amount (on a sale of 100) |
 |---|---|
-| Buyer → Merchant | 70 |
-| Buyer → UA | 30 |
+| Buyer → Merchant | 73.68 |
+| Buyer → UA | 26.32 |
 | Merchant → Buyer | NFT serial |
+| Royalty, 5% of the merchant's 73.68 → Treasury (HTS) | 3.68 |
+| **Result** | **Merchant 70, UA 30** |
 
-**Royalty interaction.** HTS calculates the royalty on the fungible value received by the **NFT sender**, which here is the merchant. With the current 5% royalty, the merchant's 70 becomes 70 − 3.5 = **66.5**, and the 3.5 goes to the Treasury. The split has to be designed with this in mind. Options:
+**Royalty interaction.** HTS calculates the royalty on the fungible value received by the **NFT sender**, which here is the merchant. **Decided (2026-11-09): UA's 30% includes the royalty.** The transfer pays the merchant `70 / 0.95` of the price and UA the rest; HTS then moves 5% of the merchant's leg to the Treasury, so the merchant ends with exactly 70 and UA with 30.
 
-- Treat the royalty as part of UA's 30%, and set the transfer amounts so that the merchant nets 70.
-- Accept that the royalty is charged on top, and state it in the consignment agreement.
-
-**Decision not made yet.** The testnet code (`sellConsigned.js`) currently charges the royalty on top: it pays the merchant 70 and HTS then takes 3.5 of it.
+**Code to change.** The testnet code (`consignmentSplit` in `src/consignment/lib.js`, used by `sellConsigned.js`) still charges the royalty on top: it pays the merchant 70, and HTS then takes 3.5 of it, leaving 66.5. The change is [chain #30](https://github.com/umina-achala/umina-achala-chain/issues/30).
 
 **Fiat payment.** If the buyer pays off-chain (card, bank transfer), no fungible value moves with the NFT. HTS then charges the **fallback fee** to the buyer as the receiver. The buyer needs HBAR in their account and must sign the transaction. That is friction for buyers who don't use crypto, and the checkout design has to account for it.
 
@@ -123,10 +138,10 @@ UA can also sell specimens it owns itself. This case does not depend on the cons
 |---|---|---|
 | NFT holder before the sale | Merchant | Treasury |
 | NFT transfer | `addApprovedNftTransfer` (UA spends the merchant's allowance) | `addNftTransfer` (the Treasury signs) |
-| Payment | Buyer −100, merchant +70, UA +30 | Buyer −100, UA +100 |
+| Payment | Buyer −100, merchant +73.68, UA +26.32 (70 / 30 after the royalty) | Buyer −100, UA +100 |
 | Signed by | UA (payer and spender), buyer | Treasury, buyer |
 | Allowance | Required | Not needed |
-| Royalty on the primary sale | Taken from the merchant's 70 | Not yet known. The Treasury is the sender; see [To Verify on Testnet](#to-verify-on-testnet) |
+| Royalty on the primary sale | Taken from the merchant's leg, part of UA's 30% | Not yet known. The Treasury is the sender; see [To Verify on Testnet](#to-verify-on-testnet) |
 | SentX bypass | Possible (the merchant holds the NFT) | Not possible, UA controls the NFT until it sells |
 
 Secondary sales and the fallback fee work the same in both cases ([Step 5](#step-5-secondary-sales-and-royalties), [Step 6](#step-6-fallback-fee)).
@@ -154,6 +169,8 @@ SentX is a Hedera NFT marketplace. It lists NFTs by taking an NFT allowance from
 - UA may not learn that the item sold until it sees the transfer on the mirror node.
 
 Secondary sales on SentX are fine. The royalty applies, and the item reaches a wider market.
+
+**Decided (2026-11-09): this is accepted.** The merchant owns the item and may sell it anywhere; UA's 30% applies only to sales on UA's site. The control options below are kept for reference; none is planned.
 
 ### Control Options
 
@@ -183,24 +200,21 @@ As far as we know, HTS does not allow adding a key that the token was not create
 
 ## Open Questions
 
-**Decision not made yet** on any of these.
+**Decided (2026-11-09)**, see [Decisions](#decisions-2026-11-09):
+- UA takes merchant items: the merchant owns them and holds the NFT and the physical item.
+- UA's 30% includes the 5% royalty.
+- No exclusive listing window: the merchant may sell anywhere.
+- The fallback fee is about USD 3 in HBAR ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)).
 
-- Will UA take merchant items on consignment at all? The questions below apply only if it does.
-- Who physically holds the specimen during consignment: UA or the merchant?
+**Decision not made yet:**
 - Should buyers be able to resell freely on SentX and other marketplaces? If yes, do not set a KYC key.
-- Does UA's 30% include the 5% royalty, or is the royalty charged on top?
-- How will fiat buyers pay the fallback fee, or will UA pay it on their behalf?
-- What is the fallback fee amount?
-- How long is the exclusive listing window, if the consignment agreement includes one?
+- How will fiat buyers on UA's site pay the fallback fee, or will UA pay it on their behalf?
+- Who may take a listed Achala apart?
 
-## Recommended Direction
+## Direction
 
-This is a proposal. **Decision not made yet.** The testnet implementation below follows it so it can be tried out.
-
-- UA holds the physical specimen during consignment.
-- The NFT goes to the merchant's wallet, and the merchant grants UA an NFT allowance to sell it.
-- The consignment agreement covers sales made outside UA: an exclusive window, and commission due at physical redemption.
-- A fallback fee is added to the royalty before the mainnet token is created.
+- The merchant holds the physical item and the NFT, and grants UA an NFT allowance to sell it on UA's site.
+- Sales made outside UA pay UA the royalty, or the fallback fee when no payment moves with the NFT.
 - UA monitors the mirror node for transfers of listed serials and removes stale listings.
 
 With this setup, merchants keep wallet visibility, SentX stays open for resales, and UA's leverage comes from physical redemption rather than on-chain locks.

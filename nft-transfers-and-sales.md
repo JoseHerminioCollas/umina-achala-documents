@@ -140,7 +140,7 @@ UA does **not** receive a royalty on every transfer. HTS charges the royalty onl
 | Transfer | Royalty (5%, fallback fee about USD 3 in HBAR) |
 |---|---|
 | Sale on SentX or another marketplace that settles on-chain | Yes, 5% |
-| Consigned sale through `sellConsigned.js` | Yes, 5%, taken from the merchant's share (see [consignment.md](consignment.md#step-4-primary-sale-70--30-split)) |
+| Consigned sale through `sellConsigned.js` | Yes, 5%, taken from the merchant's share; part of UA's 30% (decided 2026-11-09, see [consignment.md](consignment.md#step-4-primary-sale-70--30-split)) |
 | Gift, or sale paid in a separate transaction or off-chain | No royalty; the **receiver pays the fallback fee** |
 | UA's own sale from the Treasury | Expected none: the Treasury is the fee collector. To verify on testnet |
 
@@ -158,7 +158,7 @@ UA does **not** receive a royalty on every transfer. HTS charges the royalty onl
 A consigned sale (`sellConsigned.js`) is one atomic transaction that:
 
 - takes the price in HBAR from the buyer,
-- splits it 70% to the merchant and 30% to UA,
+- splits it so the merchant ends with 70% and UA with 30%, the royalty included (decided 2026-11-09; the code still adds the royalty on top),
 - moves the NFT from the merchant to the buyer, using the allowance the merchant gave UA.
 
 Hedera requires the payer of an allowance transfer to be the spender, so UA must pay for and sign the transaction, and the buyer signs too. Wallet interfaces only offer a plain Send. No wallet screen can build this transaction, so something has to build it and hand it to the wallets to sign.
@@ -270,6 +270,8 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 - A fallback fee of about USD 3 in HBAR, set from `FALLBACK_FEE_HBAR` when the token is created and changeable later with `adminToken.js fees`.
 - The wipe key is kept. Testnet uses one key for all roles.
 - Tokens and HCS topics are created by the project owner, once all Phase 2A code is written (decided 2026-11-05). None exist yet: `.env.testnet` holds placeholder IDs.
+
+**Decided (2026-11-09, [web #90](https://github.com/umina-achala/umina-achala-web/issues/90)):** the merchant owns a consigned item and holds its NFT and the physical item, and may sell it anywhere. UA's 30% (royalty included) applies to sales on UA's site; other on-chain sales pay the royalty; an off-chain sale ends with the merchant sending the NFT to the buyer, who pays the fallback fee. The artisan is paid separately for labor, not in the sale. See [consignment.md](consignment.md#decisions-2026-11-09).
 
 **Decision not made yet:**
 
