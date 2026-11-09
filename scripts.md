@@ -2,7 +2,7 @@
 
 How to run the scripts in `umina-achala-chain`, what each command-line option does, and which Hedera feature each script uses. Every script prints the same information with `--help`.
 
-> **Status:** written for [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29) (refactor steps 1–4, branch `refactor`, 2026-11-09). Anything that writes to Hedera is run by the project owner; dry-run every step first.
+> **Status:** written for [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29) (refactor steps 1–4, on the fork's `main`, 2026-11-09). Anything that writes to Hedera is run by the project owner; dry-run every step first.
 
 ## Table of Contents
 
