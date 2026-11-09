@@ -271,7 +271,7 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 - The wipe key is kept. Testnet uses one key for all roles.
 - Tokens and HCS topics are created by the project owner, once all Phase 2A code is written (decided 2026-11-05). None exist yet: `.env.testnet` holds placeholder IDs.
 
-**Decided (2026-11-09, [web #90](https://github.com/umina-achala/umina-achala-web/issues/90)):** the merchant owns a consigned item and holds its NFT and the physical item, and may sell it anywhere. UA's 30% (royalty included) applies to sales on UA's site; other on-chain sales pay the royalty; an off-chain sale ends with the merchant sending the NFT to the buyer, who pays the fallback fee. The artisan is paid separately for labor, not in the sale. See [consignment.md](consignment.md#decisions-2026-11-09).
+**Decided (2026-11-09, [web #90](https://github.com/umina-achala/umina-achala-web/issues/90)):** the merchant owns a consigned item and holds its NFT and the physical item, and may sell it anywhere. UA's 30% (royalty included) applies to sales on UA's site; other on-chain sales pay the royalty; an off-chain sale ends with the merchant sending the NFT to the buyer, who pays the fallback fee. The merchant pays the artisan separately for labor, not in the sale. See [consignment.md](consignment.md#decisions-2026-11-09).
 
 **Decision not made yet:**
 

@@ -46,7 +46,7 @@ This document describes the intended flow and the Hedera mechanics behind each s
 From [web #90](https://github.com/umina-achala/umina-achala-web/issues/90). They apply to a merchant's Umiña and to a merchant's Achala (a piece of jewelry) with its stones.
 
 - **Ownership.** The merchant owns the item 100%. UA mints it; the NFT (for an Achala, the Achala and every stone in it) goes to the merchant's wallet, and the merchant keeps the physical item.
-- **Artisan.** The artisan is paid separately for the labor of making a piece. The artisan is not a party to the sale and gets no share in the sale transfer.
+- **Artisan.** The merchant pays the artisan separately for the labor of making a piece. The artisan is not a party to the sale and gets no share in the sale transfer.
 - **Where the merchant may sell.** Anywhere, by default: on UA's site, through a wallet or SentX, or off chain.
 
 | Where it sells | What UA receives |

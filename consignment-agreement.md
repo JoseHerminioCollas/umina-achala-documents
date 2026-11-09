@@ -80,7 +80,7 @@ Amounts are computed in the coin's smallest unit; any rounding remainder goes to
 
 7.2 If a piece is taken apart, the Merchant asks UA to burn the Achala NFT; the stones' NFTs are kept and can be sold on their own. `[Who may take apart a piece while it is listed.]` **(open: #90)**
 
-7.3 The artisan who made the piece is paid by `[the Merchant]` for the labor, separately from this agreement. The artisan receives no share of any sale.
+7.3 The Merchant pays the artisan who made the piece for the labor, separately from this agreement. The artisan receives no share of any sale, and UA has no obligation to the artisan.
 
 ### 8. Merchant Warranties
 
