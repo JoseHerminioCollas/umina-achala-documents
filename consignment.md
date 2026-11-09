@@ -55,6 +55,8 @@ From [web #90](https://github.com/umina-achala/umina-achala-web/issues/90). They
 | Wallet transfer or SentX, paid on chain | The 5% royalty, automatically |
 | Off chain (cash, in person) | The merchant sends the NFT to the buyer with no payment, so the buyer pays the fallback fee (about USD 3 in HBAR) for each NFT moved |
 
+The merchant signs an agreement with these terms when an item is placed with UA: see the example in [consignment-agreement.md](consignment-agreement.md).
+
 Still open: who may take a listed Achala apart, and how the royalty and fallback fee apply when an Achala moves with its stones (to check on testnet, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)).
 
 ## Flow on Hedera
