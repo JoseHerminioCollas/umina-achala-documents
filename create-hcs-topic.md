@@ -147,7 +147,7 @@ Run from `umina-achala-chain`. Creating a topic writes to Hedera, so the project
 4. Save the printed ID in `.env.testnet` as `HCS_TOPIC_ID`.
 5. Repeat with `display` when the display topic is needed, and save it as `HCS_DISPLAY_TOPIC_ID`.
 
-The full usage is `node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]`. The env file defaults to `.env.testnet`.
+The full usage is `node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]`. The env file defaults to the network's own (`.env.testnet`; `NETWORK` chooses the network, testnet when unset), and a file given must name the network.
 
 ### What the Script Checks
 
