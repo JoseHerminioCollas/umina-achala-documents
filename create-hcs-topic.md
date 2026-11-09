@@ -127,6 +127,8 @@ Proposed on [chain #9](https://github.com/umina-achala/umina-achala-chain/issues
 
 ## Creating a Topic
 
+Hedera docs: [Create a topic](https://docs.hedera.com/native/consensus/create-topic), [Submit a message](https://docs.hedera.com/native/consensus/submit-message). The script's options are in [scripts.md](scripts.md#createtopicjs).
+
 ### Steps
 
 Run from `umina-achala-chain`. Creating a topic writes to Hedera, so the project owner runs it.

@@ -27,5 +27,8 @@ This directory contains the essential links and statutory references for the Umi
 
 ## 4. Technical Infrastructure
 *   **[Hedera Developer Docs](https://docs.hedera.com):** Documentation for **HTS** (Token Service) and **HCS** (Consensus Service).
+    *   *Tokens (HTS):* [Create a token](https://docs.hedera.com/native/tokens/define), [Custom token fees](https://docs.hedera.com/native/tokens/custom-fees), [Mint](https://docs.hedera.com/native/tokens/mint), [Associate](https://docs.hedera.com/native/tokens/associate), [Transfer](https://docs.hedera.com/native/tokens/transfer), [Approve an allowance](https://docs.hedera.com/native/accounts/approve-allowance), [Token ID](https://docs.hedera.com/native/tokens/). The full list, matched to each script, is in [scripts.md](scripts.md#hedera-documentation).
+    *   *Topics (HCS):* [Create a topic](https://docs.hedera.com/native/consensus/create-topic), [Submit a message](https://docs.hedera.com/native/consensus/submit-message).
+*   **Chain scripts:** how to run each script and what its options mean: [scripts.md](scripts.md).
 *   **[HIP-412 Metadata Standard](https://hips.hedera.com):** The community standard for NFT metadata on Hedera.
 *   **[IPFS (InterPlanetary File System)](https://ipfs.tech):** Decentralized storage for immutable stone imagery and 3D scans.

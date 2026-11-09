@@ -117,6 +117,8 @@ In the Umiña Achala compliance model, metadata is treated as the immutable **bi
 
 ### Royalty Policy
 
+Hedera docs: [Custom token fees](https://docs.hedera.com/native/tokens/custom-fees) (fixed, fractional and royalty fees, with the fallback fee), [Update token custom fees](https://docs.hedera.com/native/tokens/update-fee-schedule).
+
 Every resale of an NFT automatically generates a royalty fee to ensure artisans and miners are rewarded beyond the initial sale.
 
 - **Royalty Percentage**  
@@ -136,6 +138,8 @@ In practice, this policy ensures that the economic value of each NFT continues t
 ## Token Creation (Hedera Token Service)
 
 Execute a token creation transaction to establish the Umiña collection.
+
+Hedera docs: [Create a token](https://docs.hedera.com/native/tokens/define) (token types, keys, supply, custom fees), [Token types](https://docs.hedera.com/native/tokens/token-types), [Token ID](https://docs.hedera.com/native/tokens/). The script's options are in [scripts.md](scripts.md#createtokenjs).
 
 > **Simplified example.** The real transaction is built by `buildTokenTransaction` in `umina-achala-chain/src/token/lib.js`: it also sets the auto-renew account and adds the fallback fee to the royalty (`buildRoyaltyFee`), sets no metadata key, and takes the token class (Umiña or Achala).
 
@@ -280,7 +284,7 @@ The Achala metadata schema and the mint (`mintNFT.js --token achala`) are writte
 
 ## Using the Keys After Creation
 
-`umina-achala-chain/src/token/adminToken.js <command> [--token umina|achala]` uses the admin keys ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)), each command signed by its own key:
+`umina-achala-chain/src/token/adminToken.js <command> [--token umina|achala]` uses the admin keys ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)), each command signed by its own key (options in [scripts.md](scripts.md#admintokenjs); Hedera docs: [Pause](https://docs.hedera.com/native/tokens/pause), [Wipe](https://docs.hedera.com/native/tokens/wipe), [Burn](https://docs.hedera.com/native/tokens/burn), [Delete a token](https://docs.hedera.com/native/tokens/delete)):
 
 | Command | Key | Records |
 |---|---|---|

@@ -72,11 +72,15 @@ The Supply Role mints the serial. As described in [create-nft-token.md](create-n
 
 ### Step 2: Transfer to Merchant
 
+Hedera docs: [Associate tokens to an account](https://docs.hedera.com/native/tokens/associate), [Transfer tokens](https://docs.hedera.com/native/tokens/transfer).
+
 - The merchant's account must **associate** the Umiña token before it can receive a serial.
 - The Treasury transfers the serial to the merchant, and it then appears in the merchant's wallet.
 - Custom fees and the token treasury: confirm whether the fallback fee is charged to the merchant on this transfer (see [To Verify on Testnet](#to-verify-on-testnet)).
 
 ### Step 3: Listing on Umiña Achala
+
+Hedera docs: [Approve an allowance](https://docs.hedera.com/native/accounts/approve-allowance), [Delete an allowance](https://docs.hedera.com/native/accounts/adjust-allowance). The consignment scripts' options are in [scripts.md](scripts.md#consignment).
 
 UA does not hold the NFT once it is in the merchant's wallet. To sell it, UA needs permission to move it:
 
