@@ -91,24 +91,58 @@ random 256-bit number ──▶ private key (HCS_SUBMIT_KEY, kept secret in .env
 | DER, hex-encoded | starts with `3030020100300706052b8104000a04220420`, then 64 hex characters |
 | Raw | 64 hex characters, optionally starting with `0x` |
 
+Not every "DER" works. The DER that OpenSSL writes (`openssl pkcs8 -topk8 ... -outform DER`, starting `308184...`) also holds the public key, and the Hedera SDK refuses it ("invalid private key length: 135 bytes"). A PEM file (`-----BEGIN EC PRIVATE KEY-----`) is not read either. From OpenSSL, use the raw hex, as shown below.
+
 **Any way of generating it works, if the key meets three conditions:**
 
 1. **ECDSA on secp256k1.** Hedera also supports ED25519 keys, but UA's scripts reject them, so check what a tool generates by default.
-2. **From a secure random source.** For example: the Hedera SDK (`PrivateKey.generateECDSA()`, below), a wallet that can export a private key (such as HashPack), or `openssl ecparam -name secp256k1 -genkey` converted to hex. Never a key made up by hand, and never one from a website that generates keys: anyone who has seen the private key can post events to the topic.
+2. **From a secure random source.** For example: the Hedera SDK (`PrivateKey.generateECDSA()`, below), a wallet that can export a private key (such as HashPack), or `openssl ecparam -name secp256k1 -genkey` converted to raw hex (option 3 below). Never a key made up by hand, and never one from a website that generates keys: anyone who has seen the private key can post events to the topic.
 3. **In a format the scripts read:** DER hex or raw hex, as in the table above.
 
 The key is then used like this: the private key goes in `.env.testnet` and never leaves the machine; `createTopic.js` sets its public key on the new topic; from then on the scripts sign each event with the private key, and the network accepts only messages whose signature matches. The topic stays tied to that key: switching to a different submit key later means updating the topic with the admin key, not just changing `.env.testnet`.
 
-**Getting one.** Either:
+**Getting one.** One of:
 
-1. **Reuse an existing key** (testnet): copy the value of `OPERATOR_KEY`. Nothing new is generated; the topic's public key is then the operator account's public key.
-2. **Generate a new one**: the Hedera SDK makes a fresh random key with `PrivateKey.generateECDSA()`. Run from `umina-achala-chain`, this appends one to `.env.testnet` without printing it to the terminal:
+1. **Reuse an existing key** (testnet only): copy the value of `OPERATOR_KEY`. Nothing new is generated; the topic's public key is then the operator account's public key.
+2. **Generate a new one with the Hedera SDK**: the Hedera SDK makes a fresh random key with `PrivateKey.generateECDSA()`. Run from `umina-achala-chain`, this appends one to `.env.testnet` without printing it to the terminal:
 
    ```bash
    node --input-type=module -e 'import { PrivateKey } from "@hashgraph/sdk"; console.log("HCS_SUBMIT_KEY=" + PrivateKey.generateECDSA().toStringDer())' >> .env.testnet
    ```
 
-   Remove any earlier empty `HCS_SUBMIT_KEY=` line from the file. To see the public key that will go on the topic (safe to share), print only that:
+   Remove any earlier empty `HCS_SUBMIT_KEY=` line from the file.
+
+3. **Generate new ones with OpenSSL** (what the testnet run of 2026-11-10 does, to practise mainnet): one key for each role. Run from `umina-achala-chain`; this appends both to `.env.testnet` as raw hex, without printing them and without writing a `.pem` file:
+
+   ```bash
+   for k in HCS_SUBMIT_KEY HCS_ADMIN_KEY; do
+     echo "$k=$(openssl ecparam -name secp256k1 -genkey -noout | openssl ec -outform DER 2>/dev/null | tail -c +8 | head -c 32 | xxd -p -c 64)" >> .env.testnet
+   done
+   ```
+
+   **Or print them and paste them in by hand.** Each line prints one ready-to-paste line; copy each into `.env.testnet` in place of its empty `HCS_SUBMIT_KEY=` / `HCS_ADMIN_KEY=` line:
+
+   ```bash
+   echo "HCS_SUBMIT_KEY=$(openssl ecparam -name secp256k1 -genkey -noout | openssl ec -outform DER 2>/dev/null | tail -c +8 | head -c 32 | xxd -p -c 64)"
+   ```
+
+   ```bash
+   echo "HCS_ADMIN_KEY=$(openssl ecparam -name secp256k1 -genkey -noout | openssl ec -outform DER 2>/dev/null | tail -c +8 | head -c 32 | xxd -p -c 64)"
+   ```
+
+   The private keys then appear on screen and stay in the terminal's scrollback (not in the shell history, which keeps only the command). Clear it afterwards (`clear`, or close the terminal), and do not paste the keys anywhere but the env file.
+
+   `openssl ec -outform DER` writes the key in its SEC1 form, where the 32-byte private key starts at byte 8; `tail` and `head` cut it out and `xxd` turns it into 64 hex characters. Remove any earlier empty `HCS_SUBMIT_KEY=` and `HCS_ADMIN_KEY=` lines. Do not take the key from the `priv:` lines of `openssl ec -text`: they sometimes start with an extra `00`, which gives 66 characters.
+
+   If you keep a `.pem` file (from `-out key.pem`), the same conversion is `openssl ec -in key.pem -outform DER 2>/dev/null | tail -c +8 | head -c 32 | xxd -p -c 64`. Keep the `.pem` outside the repo: only `.env*` files are git-ignored.
+
+**Check the keys.** This lists any problem the scripts would find with them (an empty list means none), and prints only the public keys, which are safe to share:
+
+```bash
+node --input-type=module -e 'import dotenv from "dotenv"; import { envProblems } from "./src/env.js"; dotenv.config({ path: ".env.testnet" }); console.log(envProblems(process.env, ["HCS_SUBMIT_KEY", "HCS_ADMIN_KEY"]))'
+```
+
+To see the public key that will go on the topic, print only that:
 
    ```bash
    node --input-type=module -e 'import dotenv from "dotenv"; import { parseEcdsaKey } from "./src/keys.js"; dotenv.config({ path: ".env.testnet" }); console.log(parseEcdsaKey(process.env.HCS_SUBMIT_KEY).publicKey.toStringDer())'
@@ -120,8 +154,10 @@ A private key can only be **replaced**, never recovered: if it is lost or leaks,
 
 | | Testnet | Mainnet |
 |---|---|---|
-| `HCS_SUBMIT_KEY` | The operator key (`OPERATOR_KEY`), following the one-key testnet decision in [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1) | A separate key, so posting events is not tied to paying for transactions |
-| `HCS_ADMIN_KEY` | The operator key | A separate key, ideally multi-signature (see [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)) |
+| `HCS_SUBMIT_KEY` | Allowed: the operator key (`OPERATOR_KEY`), following the one-key testnet decision in [chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1). **Used in the testnet run of 2026-11-10:** a separate key generated with OpenSSL (option 3 above), to practise mainnet | A separate key, so posting events is not tied to paying for transactions |
+| `HCS_ADMIN_KEY` | Allowed: the operator key. **Used in the testnet run of 2026-11-10:** a separate key generated with OpenSSL | A separate key, ideally multi-signature (see [chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32)) |
+
+With a separate submit key, `HCS_SUBMIT_KEY` must stay in `.env.testnet` for every script that records an event: without it the operator's signature alone does not match the topic's submit key, and the event is rejected with `INVALID_SIGNATURE`.
 
 Proposed on [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9#issuecomment-6663344252) and [chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17#issuecomment-6663343568). **Mainnet keys: decision not made yet.**
 

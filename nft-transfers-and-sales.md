@@ -72,7 +72,7 @@ The current token sets six keys. While UA holds them, UA keeps these powers over
 
 `src/token/adminToken.js` uses the fee schedule, pause, wipe and burn keys ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)); wipe and burn record a `BURN` event with a reason.
 
-**Trust trade-off.** Marketplaces such as SentX and explorers such as HashScan show these keys. Buyers can see a wipe, pause or metadata key as a risk: UA could take back or change the NFT they bought. Decided and in the code ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)): the wipe key is **kept**, there is **no** metadata key, and testnet uses one key for all roles. Separate keys or multi-signature for mainnet are still open ([chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)).
+**Trust trade-off.** Marketplaces such as SentX and explorers such as HashScan show these keys. Buyers can see a wipe, pause or metadata key as a risk: UA could take back or change the NFT they bought. Decided and in the code ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1)): the wipe key is **kept**, there is **no** metadata key, and testnet uses one key for all roles. Separate keys or multi-signature for mainnet are still open ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32), Phase 3).
 
 ## Transferring an NFT
 
@@ -275,7 +275,7 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 
 **Decision not made yet:**
 
-- Separate keys or multi-signature for mainnet ([chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)).
+- Separate keys or multi-signature for mainnet ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32), Phase 3).
 - Where the Treasury key lives if UA sells from a wallet.
 - Whether the website uses the ownership check, the display topic, or both ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)).
 

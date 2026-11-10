@@ -263,7 +263,7 @@ UA is the operator account (`OPERATOR_ID`) in every script, so it pays all trans
 
 ### Setup
 
-1. Create two testnet accounts with ECDSA keys, one for the merchant and one for the buyer.
+1. Create two testnet accounts with ECDSA keys, one for the merchant and one for the buyer, in the Hedera portal ([scripts.md, Test accounts](scripts.md#test-accounts)).
 2. Add them to `.env.testnet` (see `.env.example`):
 
    ```
@@ -379,7 +379,7 @@ buildEvent(
 - **Listing watch.** `sellConsigned.js` checks the holder only at sale time. A mirror-node watch that removes listings once a serial leaves the merchant's account is not built. A proposed website ownership check is in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-sold-stones) ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)).
 - **Wallet-only sales.** No wallet screen can build the 70 / 30 sale, because UA must pay for and sign it as the allowance spender. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#ua-sales-what-can-happen-in-a-wallet); the backend that would sign UA's side is [web #116](https://github.com/umina-achala/umina-achala-web/issues/116).
 - **Fiat sales and the fallback fee.** The fallback fee is in the code; how fiat buyers pay it is not decided.
-- **Network.** The scripts run on the network named by `NETWORK` (testnet when unset), with its env file and mirror node (`src/network.js`, [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29), on the fork's `main`). Mainnet is listed but not enabled until its keys and accounts are decided ([chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)).
+- **Network.** The scripts run on the network named by `NETWORK` (testnet when unset), with its env file and mirror node (`src/network.js`, [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29), on the fork's `main`). Mainnet is listed but not enabled until its keys and accounts are decided ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32)).
 - **Not run on testnet yet.** No token or topic exists yet: they are created once all Phase 2A code is written. The items in [To Verify on Testnet](#to-verify-on-testnet) need a real run of the steps above, including whether the Treasury, as fee collector, is exempt from the fallback fee when `endConsignment.js` returns an NFT.
 
 Done since the last review (2026-11-05, on the fork's `main`): every event is signed with the submit key and checked by its receipt ([chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17)); consignment is recorded as `ISSUED_TO_OWNER` and can be ended with `endConsignment.js`; `consignToMerchant.js` requires `TREASURY_KEY` when the Treasury is not the operator, with script tests ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)); UA's own items sell with `sellOwnItem.js` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)).
