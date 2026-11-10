@@ -130,6 +130,7 @@ Dry run, nothing sent:
   memo: 'Umiña: Peruvian stones',
   roles: [ 'admin', 'supply', 'feeSchedule', 'pause', 'wipe' ],
   metadataKey: 'none (NFT metadata is immutable)',
+  maxTransactionFee: '50 HBAR (a ceiling; the network charges about USD 2 in HBAR)',
   treasurySignsSeparately: false
 }
 ```
@@ -392,7 +393,7 @@ One `TokenCreateTransaction` sets all of the following. Only the public halves o
 | Type | `NonFungibleUnique` | Each serial is one item: one stone or one piece of jewelry. |
 | Supply type | `Infinite`, initial supply 0, decimals 0 | Serials exist only when `mintNFT.js` mints them; there is no cap. |
 | Treasury | `TREASURY_ID` | New serials land here, and the royalty is paid here. |
-| Auto-renew account | `TREASURY_ID` | Pays the token's renewal so it does not expire. The renewal period is the SDK default. |
+| Auto-renew account | `TREASURY_ID` | Pays the token's renewal so it does not expire. The renewal period is the SDK default, 90 days: HashScan shows an expiry 90 days ahead, which moves forward at each renewal. Keep the Treasury funded, or the token can expire. |
 | Admin key | public key of `ADMIN_KEY` | Can update or delete the token later. It must also sign the creation. |
 | Supply key | public key of `SUPPLY_KEY` | Signs every mint and every `burn`. |
 | Fee schedule key | public key of `FEE_SCHEDULE_KEY` | Signs `adminToken.js fees`. |
@@ -401,6 +402,7 @@ One `TokenCreateTransaction` sets all of the following. Only the public halves o
 | Metadata key | **none** | NFT metadata can never change. A key left off at creation can never be added (chain #1). |
 | Freeze and KYC keys | none | Not used. |
 | Custom fee | one royalty fee, see below | |
+| Max transaction fee | 50 HBAR | The most the operator will pay for the creation. A token with custom fees costs about USD 2, charged in HBAR at the hour's rate. The SDK's default cap, 30 HBAR, is too low once HBAR is under about 6.7 cents: on 2026-11-10, at 6.54 cents, the network refused the creation with `INSUFFICIENT_TX_FEE` (fixed after tag `v0.2.0-testnet.1`). 50 HBAR covers USD 2 down to 4 cents. It is a ceiling: the network charges the actual fee. |
 
 **The royalty.** 5/100 of the value exchanged for the NFT, paid to `TREASURY_ID` on each transfer that carries HBAR or a fungible token with the NFT. When nothing of value moves with the NFT (a gift, or a sale paid off chain), Hedera charges the **fallback fee** instead: `FALLBACK_FEE_HBAR` HBAR, paid by the receiver. The fallback fee should be about USD 3, converted on the day the token is created. Record the amount and the rate on chain #6, and replace it later with `adminToken.js fees` if the HBAR price moves. `FALLBACK_FEE_HBAR` must be a positive amount with at most 8 decimals, for example `38` or `37.5`.
 
@@ -414,14 +416,14 @@ One `TokenCreateTransaction` sets all of the following. Only the public halves o
    - `OPERATOR_KEY`, `ADMIN_KEY`, `SUPPLY_KEY`, `FEE_SCHEDULE_KEY`, `PAUSE_KEY` and `WIPE_KEY` must be ECDSA (secp256k1) private keys, as 64 hex characters (optionally with `0x`) or as DER. An ED25519 key is refused.
    - When `TREASURY_ID` is not `OPERATOR_ID`, `TREASURY_KEY` is required too, because the treasury must sign.
 4. **Build the transaction** with the settings above.
-5. **`--dry-run` stops here.** It prints the name, symbol, the variable to save the ID as, type, supply type, treasury, auto-renew account, royalty, fallback fee, memo, the role names, `metadataKey: none` and whether the treasury signs separately. It prints no keys and makes no network call.
+5. **`--dry-run` stops here.** It prints the name, symbol, the variable to save the ID as, type, supply type, treasury, auto-renew account, royalty, fallback fee, memo, the role names, `metadataKey: none`, the max transaction fee and whether the treasury signs separately. It prints no keys and makes no network call.
 6. **Connect** to the network as the operator (`OPERATOR_ID`, `OPERATOR_KEY`). The operator pays the fee.
 7. **Sign and send.** The transaction is frozen and signed with `ADMIN_KEY` (and with `TREASURY_KEY` when the treasury is a separate account). The operator signs as payer when it executes.
 8. **Wait for the receipt** and print the new token ID with `SAVE THIS ID IN .env.testnet AS: UMINA_TOKEN_ID` (or `ACHALA_TOKEN_ID`).
 
 The script does not edit the env file: copy the ID into it yourself. Running it again creates **another** token; it does not check whether the variable already names one.
 
-**If it fails,** it prints the error with the operator and treasury IDs. A failure before the receipt means no token was created. Common causes: the operator account has too little HBAR, or a key in the env file does not belong to the account it is used for.
+**If it fails,** it prints the error with the operator and treasury IDs. A failure before the receipt means no token was created. Common causes: the operator account has too little HBAR; a key in the env file does not belong to the account it is used for; or `INSUFFICIENT_TX_FEE`, when USD 2 in HBAR is more than the 50 HBAR cap (HBAR under 4 cents). The receipt in the error shows the network's rate (`exchangeRateInCents`), and the mirror node shows what was charged: a refused creation costs only the node fee, about 0.002 HBAR.
 
 **Check it** on HashScan (`https://hashscan.io/testnet/token/<token-id>`) or the mirror node (`https://testnet.mirrornode.hedera.com/api/v1/tokens/<token-id>`): the custom fees, the keys and `metadata_key: null`.
 
