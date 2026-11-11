@@ -51,7 +51,7 @@ This guide defines the minting process for Umiña NFTs, covering lifecycle event
 
 Hedera docs: [Mint a token](https://docs.hedera.com/native/tokens/mint), [NFT ID](https://docs.hedera.com/native/tokens/nft-id). The script's options are in [scripts.md](scripts.md#mintnftjs).
 
-> As of 2026-11-06, on the `main` branch of the `umina-achala-chain` fork (not yet upstream). This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
+> As of 2026-11-06, on `main` in `umina-achala-chain` (fork and upstream are the same since 2026-11-09). This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
 
 `node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]`
 

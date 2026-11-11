@@ -2,7 +2,7 @@
 
 How to run the scripts in `umina-achala-chain`, what each command-line option does, and which Hedera feature each script uses. Every script prints the same information with `--help`.
 
-> **Status:** written for [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29) (refactor steps 1–4, on the fork's `main`, 2026-11-09). Token creation, topic creation, minting and the HCS events described in detail for the first testnet run at chain tag `v0.2.0-testnet.1` (2026-11-10). Anything that writes to Hedera is run by the project owner; dry-run every step first.
+> **Status:** written for [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29) (refactor steps 1–4, on `main`, fork and upstream, 2026-11-09; the issue closed 2026-11-11). Its remaining items moved to [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28) (`--token` on the consignment scripts), [chain #33](https://github.com/umina-achala/umina-achala-chain/issues/33) (code changes after the testnet minting: splitting `mintNFT.js`, speed) and [chain #34](https://github.com/umina-achala/umina-achala-chain/issues/34) (white label: a config file for another token). Token creation, topic creation, minting and the HCS events described in detail for the first testnet run at chain tag `v0.2.0-testnet.1` (2026-11-10). Anything that writes to Hedera is run by the project owner; dry-run every step first.
 
 ## Table of Contents
 
@@ -743,6 +743,8 @@ node src/record/recordEvent.js delivered <serial> --buyer <id>
 ## Consignment
 
 See [consignment.md](consignment.md) for the flow and the 70 / 30 split.
+
+The three consignment scripts take an Umiña serial only; `associateToken.js` already takes `--token`. Consigning an Achala with its stones (`--token achala` on `consignToMerchant.js`, `sellConsigned.js` and `endConsignment.js`) is [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28), after the testnet minting ([chain #33](https://github.com/umina-achala/umina-achala-chain/issues/33)).
 
 ### `associateToken.js`
 
