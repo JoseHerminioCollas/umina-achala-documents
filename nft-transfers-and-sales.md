@@ -28,7 +28,7 @@
 
 ## Overview
 
-> **Status: Phase 2 (testnet), in progress.** The code referred to here is in `umina-achala-chain` (on `main`, fork and upstream since 2026-11-09) and `umina-achala-web`, as of 2026-11-06. Code is referred to by file and function, not line number. No token or HCS topic exists yet: they are created once all Phase 2A code is written. Work that is not built is tracked in the issues listed in [Code and Issue Reference](#code-and-issue-reference).
+> **Status: Phase 2 (testnet), in progress.** The code referred to here is in `umina-achala-chain` (on `main`, fork and upstream since 2026-11-09) and `umina-achala-web`, as of 2026-11-06. Code is referred to by file and function, not line number. The testnet tokens and topics were created on 2026-11-10 ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)); minting and sales are next. Work that is not built is tracked in the issues listed in [Code and Issue Reference](#code-and-issue-reference).
 
 This document explains how an Umiña NFT moves between accounts once it exists: plain wallet-to-wallet transfers, sales by UA, and what happens after the NFT is held by someone other than UA. It also covers what the ledger records, when the royalty is paid, and how the website can tell which stones have sold.
 
@@ -148,7 +148,7 @@ UA does **not** receive a royalty on every transfer. HTS charges the royalty onl
 
 - It is charged on genuine gifts too.
 - It is a fixed amount, not 5% of the real price, so it cannot capture a price paid off-chain.
-- **Decided:** a fallback fee of about USD 3, set in HBAR on the day the token is created ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)). **In the code:** `buildRoyaltyFee` (`src/token/lib.js`) adds it from `FALLBACK_FEE_HBAR` (38 HBAR on testnet).
+- **Decided:** a fallback fee of about USD 3, set in HBAR on the day the token is created ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)). **In the code:** `buildRoyaltyFee` (`src/token/lib.js`) adds it from `FALLBACK_FEE_HBAR` (45 HBAR on testnet, from 2026-11-10).
 - The USD value drifts with the HBAR price. `node src/token/adminToken.js fees --fallback-hbar <hbar>` updates it with the Fee Schedule Key ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)).
 
 ## UA Sales: What Can Happen in a Wallet
@@ -269,7 +269,7 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 - No metadata key: NFT metadata is immutable.
 - A fallback fee of about USD 3 in HBAR, set from `FALLBACK_FEE_HBAR` when the token is created and changeable later with `adminToken.js fees`.
 - The wipe key is kept. Testnet uses one key for all roles.
-- Tokens and HCS topics are created by the project owner, once all Phase 2A code is written (decided 2026-11-05). None exist yet: `.env.testnet` holds placeholder IDs.
+- Tokens and HCS topics are created by the project owner. On testnet, created 2026-11-10 ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)): Umiña [`0.0.11400486`](https://hashscan.io/testnet/token/0.0.11400486), Achala [`0.0.11400589`](https://hashscan.io/testnet/token/0.0.11400589), provenance topic [`0.0.11400670`](https://hashscan.io/testnet/topic/0.0.11400670), display topic [`0.0.11400772`](https://hashscan.io/testnet/topic/0.0.11400772).
 
 **Decided (2026-11-09, [web #90](https://github.com/umina-achala/umina-achala-web/issues/90)):** the merchant owns a consigned item and holds its NFT and the physical item, and may sell it anywhere. UA's 30% (royalty included) applies to sales on UA's site; other on-chain sales pay the royalty; an off-chain sale ends with the merchant sending the NFT to the buyer, who pays the fallback fee. The merchant pays the artisan separately for labor, not in the sale. See [consignment.md](consignment.md#decisions-2026-11-09).
 

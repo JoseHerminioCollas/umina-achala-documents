@@ -47,7 +47,7 @@ The full checklist is [chain #22](https://github.com/umina-achala/umina-achala-c
 
 ## Working Examples
 
-A full testnet run, in order, run from the root of `umina-achala-chain`. Run each command with `--dry-run` first, then again without it. The output shown is from real dry runs on 2026-11-10 at tag `v0.2.0-testnet.1`; the IDs will differ.
+A full testnet run, in order, run from the root of `umina-achala-chain`. Run each command with `--dry-run` first, then again without it. The output shown is from real dry runs on 2026-11-10 at tag `v0.2.0-testnet.1`; the IDs will differ. Steps 1 and 2 were run for real on 2026-11-10 at `v0.2.0-testnet.2` ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)): Umiña [`0.0.11400486`](https://hashscan.io/testnet/token/0.0.11400486), Achala [`0.0.11400589`](https://hashscan.io/testnet/token/0.0.11400589), provenance topic [`0.0.11400670`](https://hashscan.io/testnet/topic/0.0.11400670), display topic [`0.0.11400772`](https://hashscan.io/testnet/topic/0.0.11400772).
 
 The examples use these items. Serials count from 1 in each new token, so on a fresh token they are:
 
@@ -65,7 +65,7 @@ The examples use these items. Serials count from 1 in each new token, so on a fr
 
 ```bash
 cd ~/projects/umina-achala/umina-achala-chain
-git describe --tags          # v0.2.0-testnet.1
+git describe --tags          # v0.2.0-testnet.2
 npm install && npm test
 ls samples/                  # master.jpg  mining-permit.pdf  store-receipt.pdf  thumb.jpg
 ```
@@ -126,7 +126,7 @@ Dry run, nothing sent:
   treasury: '0.0.4631334',
   autoRenewAccount: '0.0.4631334',
   royalty: '5/100 to 0.0.4631334',
-  fallbackFee: '38 HBAR',
+  fallbackFee: '45 HBAR',
   memo: 'Umiña: Peruvian stones',
   roles: [ 'admin', 'supply', 'feeSchedule', 'pause', 'wipe' ],
   metadataKey: 'none (NFT metadata is immutable)',

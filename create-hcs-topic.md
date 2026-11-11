@@ -20,7 +20,7 @@
   - [Status](#status)
   - [Code and Issue Reference](#code-and-issue-reference)
 
-> **Status: Phase 2 (testnet), in progress.** The code described here is on `main` in `umina-achala-chain` (fork and upstream are the same since 2026-11-09), as of 2026-11-06, including the rename to `createTopic.js` and the Achala events. No topic exists yet: `.env.testnet` still holds the placeholder `HCS_TOPIC_ID=0.0.1234`.
+> **Status: Phase 2 (testnet), in progress.** The code described here is on `main` in `umina-achala-chain` (fork and upstream are the same since 2026-11-09), as of 2026-11-06, including the rename to `createTopic.js` and the Achala events. The testnet topics were created on 2026-11-10 (chain tag `v0.2.0-testnet.2`, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)): provenance [`0.0.11400670`](https://hashscan.io/testnet/topic/0.0.11400670) and display [`0.0.11400772`](https://hashscan.io/testnet/topic/0.0.11400772).
 
 ## Purpose
 
@@ -234,7 +234,7 @@ When an event fails after the on-chain action succeeded (the NFT is minted, or t
 
 Before pinning anything, a real mint reads the provenance topic from the mirror node ([chain #20](https://github.com/umina-achala/umina-achala-chain/issues/20)):
 
-- If the topic does not exist, the mint is refused, so an NFT is never minted with nowhere to record its `MINT` event. **Until the provenance topic is created, minting is blocked on purpose.**
+- If the topic does not exist, the mint is refused, so an NFT is never minted with nowhere to record its `MINT` event. Minting was blocked on purpose until the provenance topic was created (2026-11-10).
 - If the topic already has a `MINT` event for the same `stone_id`, the mint is refused unless `--force` is given.
 
 How a missing topic is detected: the testnet mirror node answers `200` with an empty message list for the messages of a topic that does not exist; only `/api/v1/topics/<id>` answers `404`. So `topicEvents` in `src/mirror.js` looks the topic itself up first, and treats a missing or deleted topic as not found (fixed 2026-11-05, [chain #20](https://github.com/umina-achala/umina-achala-chain/issues/20)).
@@ -267,7 +267,7 @@ Planned, not recorded by any script yet: `TRANSFORMATION` (cutting or polishing)
 ## Status
 
 - The topic script is written and tested, on `main` ([chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9)); renamed from `createUminaTopic.js` to `createTopic.js`, since the topics serve both token classes.
-- No topic exists yet. Topics and the token will be created by the project owner once all Phase 2A code is written.
+- Testnet topics created by the project owner on 2026-11-10 ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)): provenance [`0.0.11400670`](https://hashscan.io/testnet/topic/0.0.11400670) and display [`0.0.11400772`](https://hashscan.io/testnet/topic/0.0.11400772), about 0.46 HBAR each. Both have the same separate submit and admin keys (ECDSA, generated with OpenSSL, not the operator key). The display topic stays empty until a script or the site posts to it.
 - Mainnet keys are not decided.
 
 ## Code and Issue Reference
