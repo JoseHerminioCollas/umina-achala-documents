@@ -108,7 +108,7 @@ Checked by `src/mint/metadataValidator.js` against `schema/hip412-umina-schema.j
 [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16). An Achala is a piece of jewelry made of one or more Umiña NFTs (see [Achala Pieces](create-nft-token.md#achala-pieces-chain-16-decided-2026-11-05-updated-2026-11-06)).
 
 ```bash
-node src/mint/mintNFT.js --form json/sample-achala-form-post.json --token achala --dry-run
+node src/mint/mintNFT.js --form json_testnet_posts/achala_a.json --token achala --dry-run
 ```
 
 **Schema:** `schema/hip412-achala-schema.json` (template `json/achala-template.json`, example `json/achala-example.json`).
