@@ -67,7 +67,7 @@ The examples use these items. Serials count from 1 in each new token, so on a fr
 cd ~/projects/umina-achala/umina-achala-chain
 git describe --tags          # v0.2.0-testnet.2
 npm install && npm test
-ls samples/                  # chrysocolla_a1.jpg  chrysocolla_a1.png  chrysocolla_a2.png  chrysocolla_a3.png  chrysocolla_a_*.pdf  …
+ls testnet/                  # achala_a.json  chrysocolla_a.json  chrysocolla_a1.jpg  chrysocolla_a1.png  …
 ```
 
 In `.env.testnet`, besides the operator, treasury and role keys:
@@ -172,10 +172,10 @@ node src/topic/createTopic.js display                 # save as HCS_DISPLAY_TOPI
 
 **Optional: look at the images and metadata first.** This needs no credentials and touches no network:
 ```bash
-node src/mint/mintNFT.js --form json_testnet_posts/chrysocolla_a.json --images-only
+node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --images-only
 ```
 ```
-✅ Metadata file generated from json_testnet_posts/chrysocolla_a.json: generated/UMINA-2026-CH-99.json
+✅ Metadata file generated from testnet/chrysocolla_a.json: generated/UMINA-2026-CH-99.json
 ✅ Metadata for UMINA-2026-CH-99 are valid.
 ✅ Made generated/UMINA-2026-CH-99/01-master.jpg (image/jpeg, 1080×1080)
 ✅ Made generated/UMINA-2026-CH-99/01-display.jpg (image/jpeg, 1080×1080)
@@ -188,8 +188,8 @@ Would pin this metadata (CIDs pending):
 
 **Stone A** (`UMINA-2026-CH-99`, the sample post as it is):
 ```bash
-node src/mint/mintNFT.js --form json_testnet_posts/chrysocolla_a.json --dry-run
-node src/mint/mintNFT.js --form json_testnet_posts/chrysocolla_a.json
+node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --dry-run
+node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
 ```
 ```
 ✅ COMPLIANCE recorded for UMINA-2026-CH-99: 0.0.<operator>@<time>
@@ -200,10 +200,10 @@ node src/mint/mintNFT.js --form json_testnet_posts/chrysocolla_a.json
 ```
 followed by a table with `stone_id`, `event: MINT`, `ipfs_cid` and `hcs_tx_id`.
 
-**Stones B, C and D.** Copy the sample post into `generated/` with a new `stone_id`. `generated/` is git-ignored, and it sits beside `json/`, so the post's `../samples/...` paths still work:
+**Stones B, C and D.** Copy the sample post into `generated/` with a new `stone_id`. `generated/` is git-ignored. The post names its files relative to `testnet/`, so the copy points them at `../testnet/`:
 ```bash
 for n in 98 97 96; do
-  sed "s/UMINA-2026-CH-99/UMINA-2026-CH-$n/" json_testnet_posts/chrysocolla_a.json > generated/post-CH-$n.json
+  sed -e "s/UMINA-2026-CH-99/UMINA-2026-CH-$n/" -e 's#"file": "#"file": "../testnet/#' testnet/chrysocolla_a.json > generated/post-CH-$n.json
 done
 node src/mint/mintNFT.js --form generated/post-CH-98.json --dry-run
 node src/mint/mintNFT.js --form generated/post-CH-98.json     # serial 2
@@ -219,7 +219,7 @@ Only `stone_id` changes; the name still says "#99". Minting a `stone_id` again i
 
 The sample Achala post names its stone as serial `3`. Point it at Stone A, serial 1:
 ```bash
-sed 's/"serial": 3/"serial": 1/' json_testnet_posts/achala_a.json > generated/post-PE-99.json
+sed -e 's/"serial": 3/"serial": 1/' -e 's#"file": "#"file": "../testnet/#' testnet/achala_a.json > generated/post-PE-99.json
 node src/mint/mintNFT.js --form generated/post-PE-99.json --token achala --dry-run
 node src/mint/mintNFT.js --form generated/post-PE-99.json --token achala
 ```
@@ -602,7 +602,7 @@ Each file is pinned to Pinata (`pinFileToIPFS`) under the name `<stone_id>-<file
 3. **Generate the metadata file** from `--form`, if given.
 4. **Check the metadata**, listing every problem at once:
    - the photo and document entries;
-   - that every file exists (and that `samples/`, which is git-ignored, exists when files point into it);
+   - that every file exists (and that `testnet/`, which is git-ignored, exists when files point into it);
    - `stone_id` against the class;
    - each photo's header;
    - the schema (`schema/hip412-umina-schema.json` or `schema/hip412-achala-schema.json`), with placeholder `ipfs://pending` URIs since nothing has a CID yet;
@@ -627,9 +627,9 @@ Each file is pinned to Pinata (`pinFileToIPFS`) under the name `<stone_id>-<file
 
 #### Minting on testnet with the sample posts
 
-- `json_testnet_posts/chrysocolla_a.json` mints `UMINA-2026-CH-99` from `samples/chrysocolla_a1.jpg` (main image) and `chrysocolla_a1.png`–`a3.png` (three views, transparent), with `chrysocolla_a_store-receipt.pdf` and `chrysocolla_a_mining-permit.pdf`. `samples/` is a symlink to the `umina-achala-samples` repo, git-ignored here; its README has the naming convention.
+- `testnet/chrysocolla_a.json` mints `UMINA-2026-CH-99` from `chrysocolla_a1.jpg` (main image) and `chrysocolla_a1.png`–`a3.png` (three views, transparent), with `chrysocolla_a_store-receipt.pdf` and `chrysocolla_a_mining-permit.pdf`, all beside the post. `testnet/` is a symlink to the `umina-achala-testnet` repo, which holds every testnet post, image and document; it is git-ignored here, and its README has the naming convention.
 - To mint a second stone, copy the post and change its `stone_id` (e.g. `UMINA-2026-CH-98`). The same `stone_id` again is refused without `--force`, and minting it again with `--force` gives one `stone_id` two serials. An Achala sale refuses a stone minted twice, because its serial would be a guess.
-- `json_testnet_posts/achala_a.json` mints `ACHALA-2026-PE-99` with `"stones": [{ "serial": 3, "stone_id": "UMINA-2026-CH-99" }]`. On a new token, change the serial to the one the Umiña mint printed (the first is 1).
+- `testnet/achala_a.json` mints `ACHALA-2026-PE-99` with `"stones": [{ "serial": 3, "stone_id": "UMINA-2026-CH-99" }]`. On a new token, change the serial to the one the Umiña mint printed (the first is 1).
 - A stone in an Achala can only be sold, consigned or burned with its Achala. To test the sale of a loose stone, mint one more stone and leave it out of every Achala.
 
 **Check it** on HashScan (`https://hashscan.io/testnet/token/<token-id>/<serial>`), on the mirror node (`/api/v1/tokens/<token-id>/nfts/<serial>`: the `metadata` field is the base64 of `ipfs://<CID>`), and on any IPFS gateway (`https://gateway.pinata.cloud/ipfs/<CID>`).
