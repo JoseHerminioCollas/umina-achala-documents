@@ -194,9 +194,9 @@ Before sending anything:
 - **The topic kind** is given: `provenance` or `display`. A topic is never created without saying which.
 - **The env file** is a testnet file. The script refuses any other, so mainnet credentials are never sent to testnet.
 - **`OPERATOR_ID`** looks like `0.0.N`, and **`OPERATOR_KEY`, `HCS_SUBMIT_KEY` and `HCS_ADMIN_KEY`** are present and are ECDSA private keys.
-- **No existing topic is replaced.** A real run looks up the current value of the env variable (`HCS_TOPIC_ID` or `HCS_DISPLAY_TOPIC_ID`) on the mirror node, and refuses if it names a topic that exists and is not deleted. A placeholder that does not exist, such as `0.0.1234`, does not block. `--force` skips this check.
+- **No existing topic is replaced.** Every run, `--dry-run` included, looks up the current value of the env variable (`HCS_TOPIC_ID` or `HCS_DISPLAY_TOPIC_ID`) on the mirror node, and refuses if it names a topic that exists and is not deleted. A placeholder that does not exist, such as `0.0.1234`, does not block. `--force` skips this check.
 
-`--dry-run` prints the topic settings (kind, memo, the variable to save the ID in, auto-renew account, and whether each key is the operator key) without any key material and without touching the network or the mirror node.
+`--dry-run` prints the topic settings (kind, memo, the variable to save the ID in, auto-renew account, and whether each key is the operator key) without any key material, and sends nothing; it reads only the mirror node, for the check above.
 
 The topic is created with the operator as its **auto-renew account**, so it does not expire. The operator pays the fee, and the admin key signs.
 

@@ -155,7 +155,7 @@ NETWORK=testnet node src/topic/createTopic.js provenance --dry-run
 NETWORK=testnet node src/topic/createTopic.js provenance              # save as HCS_TOPIC_ID
 ```
 
-Without `HCS_SUBMIT_KEY` and `HCS_ADMIN_KEY`, the dry run stops with:
+The dry run checks the mirror node like a real run: if `HCS_TOPIC_ID` already names a live topic it stops with `❌ HCS_TOPIC_ID already names topic … Use --force to create a new one anyway.` Without `HCS_SUBMIT_KEY` and `HCS_ADMIN_KEY`, it stops with:
 ```
 ❌ Problems in .env.testnet:
    - HCS_SUBMIT_KEY is not set
@@ -234,11 +234,10 @@ Stone A is now mounted. Without `--token achala` the post is refused, with a hin
 
 ### 5. Associate the tokens with the buyer
 
-The buyer receives an Achala together with its stones, so the buyer associates both tokens. `consignToMerchant.js` associates the merchant by itself, so the merchant line is optional. An account that is already associated is reported and skipped.
+The buyer receives an Achala together with its stones, so the buyer associates both tokens: `--token achala` does both in one run. `consignToMerchant.js` associates the merchant by itself, so the merchant line is optional. A token that is already associated is reported and skipped.
 ```bash
-NETWORK=testnet node src/consignment/associateToken.js buyer --dry-run
-NETWORK=testnet node src/consignment/associateToken.js buyer
-NETWORK=testnet node src/consignment/associateToken.js buyer --token achala
+NETWORK=testnet node src/consignment/associateToken.js buyer --token achala --dry-run
+NETWORK=testnet node src/consignment/associateToken.js buyer --token achala   # Umiña and Achala
 NETWORK=testnet node src/consignment/associateToken.js merchant
 ```
 
@@ -480,7 +479,7 @@ NETWORK=testnet node src/topic/createTopic.js <provenance|display> [env-file] [-
 | `<provenance\|display>` | Which topic. Required, so a topic is never created without saying which. |
 | `[env-file]` | As for `createToken.js`. |
 | `--force` | Create a new topic even when the variable (`HCS_TOPIC_ID` or `HCS_DISPLAY_TOPIC_ID`) already names one that exists. |
-| `--dry-run` | Prints the topic settings, without keys, and sends nothing. |
+| `--dry-run` | Checks the mirror node for an existing topic (as a real run does, unless `--force`), prints the topic settings, without keys, and sends nothing. |
 
 Needs: `OPERATOR_ID`, `OPERATOR_KEY`, `HCS_SUBMIT_KEY`, `HCS_ADMIN_KEY`.
 
@@ -719,6 +718,8 @@ NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price-hbar> [--token umin
 | `<price-hbar>` | The price in HBAR. |
 | `--token umina\|achala` | The token class (default `umina`). A stone mounted in an Achala is refused. |
 
+The provenance topic and the holders (mirror node) are read first, also on `--dry-run`: a serial the Treasury no longer holds, or one that does not exist, is refused before anything is sent.
+
 Needs: `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID`, the token ID, `HCS_TOPIC_ID`, `BUYER_ID`, `BUYER_KEY`.
 
 Hedera: [Transfer tokens](https://docs.hedera.com/native/tokens/transfer), [Get NFT info](https://docs.hedera.com/native/tokens/get-nft-info).
@@ -758,7 +759,7 @@ Every consignment script takes `--token umina|achala`. With `--token achala` the
 
 ### `associateToken.js`
 
-Associates a token with the merchant or buyer test account, so it can receive NFTs. On testnet only; in production the account does this in its own wallet.
+Associates the Umiña token, or with `--token achala` both the Umiña and the Achala tokens, with the merchant or buyer test account, so it can receive NFTs. A token already associated is skipped. On testnet only; in production the account does this in its own wallet.
 
 ```
 NETWORK=testnet node src/consignment/associateToken.js <merchant|buyer> [--token umina|achala] [--dry-run]
@@ -767,7 +768,7 @@ NETWORK=testnet node src/consignment/associateToken.js <merchant|buyer> [--token
 | Argument / option | Meaning |
 |---|---|
 | `<merchant\|buyer>` | The account: `MERCHANT_ID`/`MERCHANT_KEY` or `BUYER_ID`/`BUYER_KEY`. Its key signs; UA pays. |
-| `--token umina\|achala` | The token to associate (default `umina`). |
+| `--token umina\|achala` | `umina` (default) associates the Umiña token; `achala` associates both, since an Achala moves with its stones. |
 
 Hedera: [Associate tokens to an account](https://docs.hedera.com/native/tokens/associate).
 
