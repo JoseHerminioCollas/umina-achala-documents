@@ -53,7 +53,7 @@ Hedera docs: [Mint a token](https://docs.hedera.com/native/tokens/mint), [NFT ID
 
 > As of 2026-11-06, on `main` in `umina-achala-chain` (fork and upstream are the same since 2026-11-09). This section describes what the mint script actually does. The sections after it are the original design and are kept as background; where they differ (one combined "birth certificate" message, image handling, field names), **this section is current**.
 
-`node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]`
+`NETWORK=testnet node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]`
 
 One script mints both token classes, as `createToken.js` creates both: an Umiña (a stone) by default, an Achala (jewelry) with `--token achala`. Metadata of the other class is refused by its `stone_id`, with a hint to give `--token`.
 
@@ -77,7 +77,7 @@ If something fails after pinning, the pinned CIDs are listed so they can be unpi
 
 | | Rule |
 |---|---|
-| Fields | `main_image` (required) and `images` (up to 5 more), each `{ file, description }`; a photo listed twice is refused |
+| Fields | `main_image` (required) and `images` (up to 20 more, [chain #35](https://github.com/umina-achala/umina-achala-chain/issues/35)), each `{ file, description }`; a photo listed twice is refused |
 | Accepted | JPEG, PNG or WebP, checked by the real file type; up to 25 MB and about 100 megapixels |
 | Refused | GIF, HEIC (export iPhone photos as JPEG), RAW |
 | Master, every photo | full size, the upload's format (JPEG and WebP at quality 95, PNG lossless); a `files[]` entry with its SHA-256 `checksum`; the main photo's master is the default file |
@@ -108,7 +108,7 @@ Checked by `src/mint/metadataValidator.js` against `schema/hip412-umina-schema.j
 [chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16). An Achala is a piece of jewelry made of one or more Umiña NFTs (see [Achala Pieces](create-nft-token.md#achala-pieces-chain-16-decided-2026-11-05-updated-2026-11-06)).
 
 ```bash
-node src/mint/mintNFT.js --form testnet/achala_a.json --token achala --dry-run
+NETWORK=testnet node src/mint/mintNFT.js --form testnet/achala_a.json --token achala --dry-run
 ```
 
 **Schema:** `schema/hip412-achala-schema.json` (template `json/achala-template.json`, example `json/achala-example.json`).

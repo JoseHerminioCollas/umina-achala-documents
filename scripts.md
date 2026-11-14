@@ -2,7 +2,7 @@
 
 How to run the scripts in `umina-achala-chain`, what each command-line option does, and which Hedera feature each script uses. Every script prints the same information with `--help`.
 
-> **Status:** written for [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29) (refactor steps 1–4, on `main`, fork and upstream, 2026-11-09; the issue closed 2026-11-11). Its remaining items moved to [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28) (`--token` on the consignment scripts), [chain #33](https://github.com/umina-achala/umina-achala-chain/issues/33) (code changes after the testnet minting: splitting `mintNFT.js`, speed) and [chain #34](https://github.com/umina-achala/umina-achala-chain/issues/34) (white label: a config file for another token). Token creation, topic creation, minting and the HCS events described in detail for the first testnet run at chain tag `v0.2.0-testnet.1` (2026-11-10). Anything that writes to Hedera is run by the project owner; dry-run every step first.
+> **Status:** written for [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29) (refactor steps 1–4, on `main`, fork and upstream, 2026-11-09; the issue closed 2026-11-11). Its remaining items moved to [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28) (`--token` on the consignment scripts), [chain #34](https://github.com/umina-achala/umina-achala-chain/issues/34) (refactor V2 before the testnet mint: `config/`, `NETWORK` required, splitting `mintNFT.js`, speed; it took over chain #33, closed 2026-11-14) and [chain #37](https://github.com/umina-achala/umina-achala-chain/issues/37) (reading only new topic messages). Token creation, topic creation, minting and the HCS events described in detail for the first testnet run at chain tag `v0.2.0-testnet.1` (2026-11-10). Anything that writes to Hedera is run by the project owner; dry-run every step first.
 
 ## Table of Contents
 
@@ -23,7 +23,7 @@ How to run the scripts in `umina-achala-chain`, what each command-line option do
 |---|---|
 | `--dry-run` | Checks the arguments, the environment and (where the script reads it) the provenance topic and the ledger, prints what would happen, and **sends nothing**. Use it before every real run. |
 | `-h`, `--help` | Prints the usage and options and stops. It reads no env file and touches no network. |
-| `NETWORK=<name>` | Not an option but a shell variable, set before the command: `NETWORK=testnet node src/...`. It chooses the Hedera network, its env file and its mirror node. `testnet` when unset. `mainnet` is listed but **not enabled** until its keys and accounts are decided ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32)). |
+| `NETWORK=<name>` | Not an option but a shell variable, set before the command: `NETWORK=testnet node src/...`. It chooses the Hedera network, its env file and its mirror node (`config/testnet.js`, `config/mainnet.js`). **Required, no default** ([chain #34](https://github.com/umina-achala/umina-achala-chain/issues/34)): a script refuses to run without it, so a forgotten variable never reaches either network. `validateMetadata.js` and `importIma.js` need none. `mainnet` is listed but **not enabled** until its keys and accounts are decided ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32)). |
 
 **Env file.** Each script reads the network's own file, `.env.testnet` on testnet. `createToken.js` and `createTopic.js` also take a file as an argument; its name must contain the network's name, so a mainnet file is never used on testnet by mistake.
 
@@ -106,13 +106,13 @@ Each line should end in `ECDSA_SECP256K1 key matches`.
 Any script prints its usage with `--help`:
 
 ```bash
-node src/mint/mintNFT.js --help
+NETWORK=testnet node src/mint/mintNFT.js --help
 ```
 
 ### 1. Create the two tokens
 
 ```bash
-node src/token/createToken.js --dry-run
+NETWORK=testnet node src/token/createToken.js --dry-run
 ```
 ```
 🚀 Creating Umiña NFT Class...
@@ -135,7 +135,7 @@ Dry run, nothing sent:
 }
 ```
 ```bash
-node src/token/createToken.js
+NETWORK=testnet node src/token/createToken.js
 ```
 ```
 ✅ Success! Umiña Token ID: 0.0.<n>
@@ -144,15 +144,15 @@ SAVE THIS ID IN .env.testnet AS: UMINA_TOKEN_ID
 Copy the ID into `.env.testnet`, then do the same for the Achala class:
 
 ```bash
-node src/token/createToken.js --token achala --dry-run
-node src/token/createToken.js --token achala          # save as ACHALA_TOKEN_ID
+NETWORK=testnet node src/token/createToken.js --token achala --dry-run
+NETWORK=testnet node src/token/createToken.js --token achala          # save as ACHALA_TOKEN_ID
 ```
 
 ### 2. Create the provenance topic
 
 ```bash
-node src/topic/createTopic.js provenance --dry-run
-node src/topic/createTopic.js provenance              # save as HCS_TOPIC_ID
+NETWORK=testnet node src/topic/createTopic.js provenance --dry-run
+NETWORK=testnet node src/topic/createTopic.js provenance              # save as HCS_TOPIC_ID
 ```
 
 Without `HCS_SUBMIT_KEY` and `HCS_ADMIN_KEY`, the dry run stops with:
@@ -164,15 +164,15 @@ Without `HCS_SUBMIT_KEY` and `HCS_ADMIN_KEY`, the dry run stops with:
 
 The display topic is optional; no script posts to it yet:
 ```bash
-node src/topic/createTopic.js display --dry-run
-node src/topic/createTopic.js display                 # save as HCS_DISPLAY_TOPIC_ID
+NETWORK=testnet node src/topic/createTopic.js display --dry-run
+NETWORK=testnet node src/topic/createTopic.js display                 # save as HCS_DISPLAY_TOPIC_ID
 ```
 
 ### 3. Mint the stones
 
 **Optional: look at the images and metadata first.** This needs no credentials and touches no network:
 ```bash
-node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --images-only
+NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --images-only
 ```
 ```
 ✅ Metadata file generated from testnet/chrysocolla_a.json: generated/UMINA-2026-CH-99.json
@@ -188,8 +188,8 @@ Would pin this metadata (CIDs pending):
 
 **Stone A** (`UMINA-2026-CH-99`, the sample post as it is):
 ```bash
-node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --dry-run
-node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
+NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --dry-run
+NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
 ```
 ```
 ✅ COMPLIANCE recorded for UMINA-2026-CH-99: 0.0.<operator>@<time>
@@ -205,10 +205,10 @@ followed by a table with `stone_id`, `event: MINT`, `ipfs_cid` and `hcs_tx_id`.
 for n in 98 97 96; do
   sed -e "s/UMINA-2026-CH-99/UMINA-2026-CH-$n/" -e 's#"file": "#"file": "../testnet/#' testnet/chrysocolla_a.json > generated/post-CH-$n.json
 done
-node src/mint/mintNFT.js --form generated/post-CH-98.json --dry-run
-node src/mint/mintNFT.js --form generated/post-CH-98.json     # serial 2
-node src/mint/mintNFT.js --form generated/post-CH-97.json     # serial 3
-node src/mint/mintNFT.js --form generated/post-CH-96.json     # serial 4
+NETWORK=testnet node src/mint/mintNFT.js --form generated/post-CH-98.json --dry-run
+NETWORK=testnet node src/mint/mintNFT.js --form generated/post-CH-98.json     # serial 2
+NETWORK=testnet node src/mint/mintNFT.js --form generated/post-CH-97.json     # serial 3
+NETWORK=testnet node src/mint/mintNFT.js --form generated/post-CH-96.json     # serial 4
 ```
 Only `stone_id` changes; the name still says "#99". Minting a `stone_id` again is refused:
 ```
@@ -220,8 +220,8 @@ Only `stone_id` changes; the name still says "#99". Minting a `stone_id` again i
 The sample Achala post names its stone as serial `3`. Point it at Stone A, serial 1:
 ```bash
 sed -e 's/"serial": 3/"serial": 1/' -e 's#"file": "#"file": "../testnet/#' testnet/achala_a.json > generated/post-PE-99.json
-node src/mint/mintNFT.js --form generated/post-PE-99.json --token achala --dry-run
-node src/mint/mintNFT.js --form generated/post-PE-99.json --token achala
+NETWORK=testnet node src/mint/mintNFT.js --form generated/post-PE-99.json --token achala --dry-run
+NETWORK=testnet node src/mint/mintNFT.js --form generated/post-PE-99.json --token achala
 ```
 Before posting anything, a real run checks the stone on the ledger:
 ```
@@ -236,18 +236,18 @@ Stone A is now mounted. Without `--token achala` the post is refused, with a hin
 
 The buyer receives an Achala together with its stones, so the buyer associates both tokens. `consignToMerchant.js` associates the merchant by itself, so the merchant line is optional. An account that is already associated is reported and skipped.
 ```bash
-node src/consignment/associateToken.js buyer --dry-run
-node src/consignment/associateToken.js buyer
-node src/consignment/associateToken.js buyer --token achala
-node src/consignment/associateToken.js merchant
+NETWORK=testnet node src/consignment/associateToken.js buyer --dry-run
+NETWORK=testnet node src/consignment/associateToken.js buyer
+NETWORK=testnet node src/consignment/associateToken.js buyer --token achala
+NETWORK=testnet node src/consignment/associateToken.js merchant
 ```
 
 ### 6. Sell from the Treasury
 
 **Stone B, loose, for 25 HBAR:**
 ```bash
-node src/sale/sellOwnItem.js 2 25 --dry-run
-node src/sale/sellOwnItem.js 2 25
+NETWORK=testnet node src/sale/sellOwnItem.js 2 25 --dry-run
+NETWORK=testnet node src/sale/sellOwnItem.js 2 25
 ```
 ```
 ✅ Sold 0.0.<umina>/2 to 0.0.<buyer>: SUCCESS (0.0.<operator>@<time>)
@@ -255,7 +255,7 @@ node src/sale/sellOwnItem.js 2 25
 
 **Stone A on its own is refused**, also on `--dry-run`, because it is mounted:
 ```bash
-node src/sale/sellOwnItem.js 1 25 --dry-run
+NETWORK=testnet node src/sale/sellOwnItem.js 1 25 --dry-run
 ```
 ```
 ❌ ... UMINA-2026-CH-99 (0.0.<umina>/1) is mounted in Achala ACHALA-2026-PE-99 ...: it moves only with its Achala, and is freed when the Achala is burned
@@ -263,8 +263,8 @@ node src/sale/sellOwnItem.js 1 25 --dry-run
 
 **The pendant with its stone, for 120 HBAR:**
 ```bash
-node src/sale/sellOwnItem.js 1 120 --token achala --dry-run
-node src/sale/sellOwnItem.js 1 120 --token achala
+NETWORK=testnet node src/sale/sellOwnItem.js 1 120 --token achala --dry-run
+NETWORK=testnet node src/sale/sellOwnItem.js 1 120 --token achala
 ```
 This moves Achala #1 and Umiña #1 to the buyer in one transfer. The `SALE` event lists `from_stone_ids` and `umina_serials`.
 
@@ -272,45 +272,55 @@ This moves Achala #1 and Umiña #1 to the buyer in one transfer. The `SALE` even
 
 **Stone C: consign it, then sell it for 50 HBAR.** The merchant ends with 70% and UA with 30%, royalty included:
 ```bash
-node src/consignment/consignToMerchant.js 3 --dry-run
-node src/consignment/consignToMerchant.js 3
-node src/consignment/sellConsigned.js 3 50 --dry-run      # shows what each side is paid and ends with
-node src/consignment/sellConsigned.js 3 50
+NETWORK=testnet node src/consignment/consignToMerchant.js 3 --dry-run
+NETWORK=testnet node src/consignment/consignToMerchant.js 3
+NETWORK=testnet node src/consignment/sellConsigned.js 3 50 --dry-run      # shows what each side is paid and ends with
+NETWORK=testnet node src/consignment/sellConsigned.js 3 50
 ```
 
 **Stone D: consign it, then end the consignment:**
 ```bash
-node src/consignment/consignToMerchant.js 4
-node src/consignment/endConsignment.js 4 --dry-run
-node src/consignment/endConsignment.js 4                  # back to the Treasury, recorded as TRANSFER
+NETWORK=testnet node src/consignment/consignToMerchant.js 4
+NETWORK=testnet node src/consignment/endConsignment.js 4 --dry-run
+NETWORK=testnet node src/consignment/endConsignment.js 4                  # back to the Treasury, recorded as TRANSFER
 ```
 `endConsignment.js 4 --keep` would instead only revoke UA's allowance and leave the NFT with the merchant.
+
+**A second Achala: consign it with its stones, then sell it** ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)). Its stones must be minted, in the Achala's `MINT` and held by the Treasury; the merchant and the buyer associate both tokens:
+```bash
+NETWORK=testnet node src/consignment/associateToken.js buyer --token achala
+NETWORK=testnet node src/consignment/consignToMerchant.js 2 --token achala --dry-run
+NETWORK=testnet node src/consignment/consignToMerchant.js 2 --token achala   # the Achala and its stones, one transfer
+NETWORK=testnet node src/consignment/sellConsigned.js 2 80 --token achala --dry-run
+NETWORK=testnet node src/consignment/sellConsigned.js 2 80 --token achala    # one payment, all N+1 NFTs to the buyer
+```
+`endConsignment.js 2 --token achala` would instead return the piece and its stones to the Treasury. Selling, consigning or ending one of its stones alone is refused.
 
 ### 8. Record a sale or a delivery after the fact
 
 A sale made wallet to wallet or paid off chain is recorded with `recordEvent.js`, which checks it against the ledger first. For example, the delivery of Stone B to the buyer:
 ```bash
-node src/record/recordEvent.js delivered 2 --buyer 0.0.<buyer> --method in_person --dry-run
-node src/record/recordEvent.js delivered 2 --buyer 0.0.<buyer> --method in_person
+NETWORK=testnet node src/record/recordEvent.js delivered 2 --buyer 0.0.<buyer> --method in_person --dry-run
+NETWORK=testnet node src/record/recordEvent.js delivered 2 --buyer 0.0.<buyer> --method in_person
 ```
 And a sale paid in cash, where `<nft-tx>` is the transaction that moved the NFT:
 ```bash
-node src/record/recordEvent.js sale 2 --seller 0.0.<seller> --buyer 0.0.<buyer> \
+NETWORK=testnet node src/record/recordEvent.js sale 2 --seller 0.0.<seller> --buyer 0.0.<buyer> \
   --nft-tx <nft-tx> --payment off_chain --sold-for 300 --currency PEN --dry-run
 ```
 
 ### 9. Admin
 
 ```bash
-node src/token/adminToken.js pause --dry-run
-node src/token/adminToken.js pause                         # every transfer of every serial stops
-node src/token/adminToken.js unpause
+NETWORK=testnet node src/token/adminToken.js pause --dry-run
+NETWORK=testnet node src/token/adminToken.js pause                         # every transfer of every serial stops
+NETWORK=testnet node src/token/adminToken.js unpause
 
-node src/token/adminToken.js fees --fallback-hbar 40 --dry-run
-node src/token/adminToken.js fees --fallback-hbar 40       # royalty stays 5%
+NETWORK=testnet node src/token/adminToken.js fees --fallback-hbar 40 --dry-run
+NETWORK=testnet node src/token/adminToken.js fees --fallback-hbar 40       # royalty stays 5%
 
-node src/token/adminToken.js burn 4 --reason "testnet check" --dry-run
-node src/token/adminToken.js burn 4 --reason "testnet check"   # Stone D, back in the Treasury
+NETWORK=testnet node src/token/adminToken.js burn 4 --reason "testnet check" --dry-run
+NETWORK=testnet node src/token/adminToken.js burn 4 --reason "testnet check"   # Stone D, back in the Treasury
 ```
 `burn` and `wipe` require `--reason`. It is public and permanent, so it must contain no personal data:
 ```
@@ -319,7 +329,7 @@ node src/token/adminToken.js burn 4 --reason "testnet check"   # Stone D, back i
 ```
 `wipe` removes a serial from the account that holds it. For example, Stone C from the buyer:
 ```bash
-node src/token/adminToken.js wipe 3 --account 0.0.<buyer> --reason "testnet check" --dry-run
+NETWORK=testnet node src/token/adminToken.js wipe 3 --account 0.0.<buyer> --reason "testnet check" --dry-run
 ```
 
 ### 10. Check the results
@@ -339,7 +349,7 @@ Or on HashScan: `https://hashscan.io/testnet/topic/<topic-id>` and `https://hash
 
 A mistyped option sends nothing:
 ```bash
-node src/token/createToken.js --dryrun
+NETWORK=testnet node src/token/createToken.js --dryrun
 ```
 ```
 ❌ Problems found:
@@ -347,7 +357,7 @@ node src/token/createToken.js --dryrun
 ```
 A missing variable is named before anything is sent:
 ```bash
-node src/sale/sellOwnItem.js 1 25 --dry-run      # with BUYER_ID and BUYER_KEY not set yet
+NETWORK=testnet node src/sale/sellOwnItem.js 1 25 --dry-run      # with BUYER_ID and BUYER_KEY not set yet
 ```
 ```
 ❌ Problems found:
@@ -362,7 +372,7 @@ node src/sale/sellOwnItem.js 1 25 --dry-run      # with BUYER_ID and BUYER_KEY n
 Creates an NFT token class: its name, symbol and memo, the 5% royalty with the fallback fee, and the role keys. No metadata key, so NFT metadata can never change.
 
 ```
-node src/token/createToken.js [env-file] [--token umina|achala] [--dry-run]
+NETWORK=testnet node src/token/createToken.js [env-file] [--token umina|achala] [--dry-run]
 ```
 
 | Argument / option | Meaning |
@@ -434,7 +444,7 @@ Hedera: [Create a token](https://docs.hedera.com/native/tokens/define), [Custom 
 Uses the token's admin keys. Each command is signed by its own key.
 
 ```
-node src/token/adminToken.js <command> [serial] [options] [--token umina|achala] [--dry-run]
+NETWORK=testnet node src/token/adminToken.js <command> [serial] [options] [--token umina|achala] [--dry-run]
 ```
 
 | Command | Meaning | Signed by |
@@ -462,7 +472,7 @@ Hedera: [Update token custom fees](https://docs.hedera.com/native/tokens/update-
 Creates an HCS topic with a submit key (only the project can post) and an admin key (the topic can be updated or deleted later).
 
 ```
-node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]
+NETWORK=testnet node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]
 ```
 
 | Argument / option | Meaning |
@@ -515,17 +525,17 @@ Hedera: [Create a topic](https://docs.hedera.com/native/consensus/create-topic),
 
 ### `mintNFT.js`
 
-Validates the metadata, makes the image versions, pins the images and the metadata to IPFS, records `COMPLIANCE`, mints, then records `MINT`.
+Validates the metadata, makes the image versions, records `COMPLIANCE`, pins the images and the metadata to IPFS, mints, then records `MINT`. The code: `mintNFT.js` keeps that order; `prepare.js` does the checks (no network), `publish.js` pins and mints, and `umina.js` / `achala.js` hold what differs by class (`mintSteps`: attributes, `COMPLIANCE` fields, an Achala's stone checks, the `MINT` fields; [chain #34](https://github.com/umina-achala/umina-achala-chain/issues/34)).
 
 ```
-node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]
+NETWORK=testnet node src/mint/mintNFT.js <metadata-file | --form post-file> [--token umina|achala] [--out dir] [--force] [--dry-run | --images-only]
 ```
 
 | Argument / option | Meaning |
 |---|---|
 | `<metadata-file>` | A metadata JSON file to mint. |
 | `--form <post-file>` | A mint form post. The metadata file is generated from it (from the class's template) and then minted. Give either this or a metadata file. |
-| `--out <dir>` | Where `--form` writes the generated metadata file (default `generated/`). |
+| `--out <dir>` | Where `--form` writes the generated metadata file and where the image versions go, in `<dir>/<stone_id>/` (default `generated/`). |
 | `--token umina\|achala` | The token class (default `umina`). An Achala's stones must be minted and held by the Treasury. |
 | `--force` | Mint even when the `stone_id` already has a `MINT` on the topic. |
 | `--images-only` | Makes the image versions and stops: no network, no pinning. |
@@ -549,9 +559,9 @@ A mint writes to three places: HCS, IPFS (through Pinata) and the token. They ha
 
 #### The input: a metadata file or a form post
 
-- **Metadata file** (`node src/mint/mintNFT.js <file>`): a HIP-412 JSON file with no `image` or `files` of its own. It names its photos and documents in input-only fields, each with a `file` (a path relative to the metadata file) and a `description`:
+- **Metadata file** (`NETWORK=testnet node src/mint/mintNFT.js <file>`): a HIP-412 JSON file with no `image` or `files` of its own. It names its photos and documents in input-only fields, each with a `file` (a path relative to the metadata file) and a `description`:
   - `main_image` (required): its display version becomes `image`, and its master the default file.
-  - `images` (optional): up to 5 more photos.
+  - `images` (optional): up to 20 more photos ([chain #35](https://github.com/umina-achala/umina-achala-chain/issues/35); metadata is immutable, so add every photo at the mint).
   - `documents` (optional): receipts, permits and 3D scans, `.pdf` or `.glb`.
 - **Form post** (`--form <post-file>`): a JSON file standing in for the mint form. The script copies the class's template (`json/umina-template.json` or `json/achala-template.json`), fills it from the post, and writes it to `<out>/<stone_id>.json` (default `generated/`):
   - `name`, `description` and `creator` go to the top level (`creator` stays the template's, Umiña Achala, unless the post sets it to the seller or artisan).
@@ -663,9 +673,9 @@ A message must fit in one HCS message, **1024 bytes** of JSON. A larger event is
 |---|---|---|
 | `COMPLIANCE` | `mintNFT.js`, before pinning | Umiña: `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code`. Achala: `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids`. |
 | `MINT` | `mintNFT.js`, after the mint | `ipfs_cid` (the metadata). An Achala adds `from_stone_ids`. `ref` is the mint transaction. |
-| `ISSUED_TO_OWNER` | `consignToMerchant.js` | `to_id` (the merchant) and `allowance_ref` (the allowance transaction). `ref` is the transfer to the merchant. |
+| `ISSUED_TO_OWNER` | `consignToMerchant.js` | `to_id` (the merchant) and `allowance_ref` (the allowance transaction). `ref` is the transfer to the merchant. An Achala adds `stone_id`, `from_stone_ids`, `umina_token_id` and `umina_serials`. |
 | `SALE` | `sellOwnItem.js`, `sellConsigned.js`, `recordEvent.js sale` | `seller_id`, `buyer_id`, `payment` (`on_chain` or `off_chain`) and the price (`sold_for`). An Achala adds `from_stone_ids`, `umina_token_id` and `umina_serials`. `ref` is the transfer. |
-| `TRANSFER` | `endConsignment.js` | `from_id` (the merchant), `to_id` (the Treasury), `reason: "consignment_ended"`. `ref` is the return transfer. |
+| `TRANSFER` | `endConsignment.js` | `from_id` (the merchant), `to_id` (the Treasury), `reason: "consignment_ended"`. `ref` is the return transfer. An Achala adds its stones, as `ISSUED_TO_OWNER`. |
 | `DELIVERED` | `recordEvent.js delivered` | The method, the time, and the proof (`signed` or `none`). `ref` is the sale. |
 | `BURN` | `adminToken.js wipe` and `burn` | `reason`, `method` (`wipe` or `burn`), and for wipe `from_id`. `ref` is the wipe or burn. Burning an Achala unmounts its stones. |
 
@@ -700,7 +710,7 @@ The mirror node can be a few seconds behind consensus. A script run straight aft
 Sells an item UA holds itself, straight from the Treasury, in one transfer: the buyer pays UA and the NFT goes to the buyer (an Achala with its stones). Records `SALE`.
 
 ```
-node src/sale/sellOwnItem.js <serial> <price-hbar> [--token umina|achala] [--dry-run]
+NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price-hbar> [--token umina|achala] [--dry-run]
 ```
 
 | Argument / option | Meaning |
@@ -718,12 +728,12 @@ Hedera: [Transfer tokens](https://docs.hedera.com/native/tokens/transfer), [Get 
 Records a `SALE` or `DELIVERED` event for something that already happened, after checking it against the ledger. It never moves an NFT or HBAR.
 
 ```
-node src/record/recordEvent.js sale <serial> --seller <id> --buyer <id>
+NETWORK=testnet node src/record/recordEvent.js sale <serial> --seller <id> --buyer <id>
   --nft-tx <tx-id> --payment <on_chain|off_chain> [--payment-tx <tx-id>]
   [--sold-for <amount> [--currency <code>]] [--stone-id <id>]
   [--token umina|achala] [--dry-run]
 
-node src/record/recordEvent.js delivered <serial> --buyer <id>
+NETWORK=testnet node src/record/recordEvent.js delivered <serial> --buyer <id>
   [--method in_person] [--delivered-at <date-time>] [--proof <file>]
   [--stone-id <id>] [--token umina|achala] [--dry-run]
 ```
@@ -744,14 +754,14 @@ node src/record/recordEvent.js delivered <serial> --buyer <id>
 
 See [consignment.md](consignment.md) for the flow and the 70 / 30 split.
 
-The three consignment scripts take an Umiña serial only; `associateToken.js` already takes `--token`. Consigning an Achala with its stones (`--token achala` on `consignToMerchant.js`, `sellConsigned.js` and `endConsignment.js`) is [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28), after the testnet minting ([chain #33](https://github.com/umina-achala/umina-achala-chain/issues/33)).
+Every consignment script takes `--token umina|achala`. With `--token achala` the Achala moves with every Umiña stone in it (from its `MINT`), in one transfer of N+1 NFTs, with one allowance approval or revocation and one event naming the stones ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28), on the `refactor-v2` branch). A stone in an Achala is refused on its own by all three. Each reads the provenance topic and checks on the mirror node that the NFTs are where they should be, also on `--dry-run`.
 
 ### `associateToken.js`
 
 Associates a token with the merchant or buyer test account, so it can receive NFTs. On testnet only; in production the account does this in its own wallet.
 
 ```
-node src/consignment/associateToken.js <merchant|buyer> [--token umina|achala] [--dry-run]
+NETWORK=testnet node src/consignment/associateToken.js <merchant|buyer> [--token umina|achala] [--dry-run]
 ```
 
 | Argument / option | Meaning |
@@ -763,44 +773,47 @@ Hedera: [Associate tokens to an account](https://docs.hedera.com/native/tokens/a
 
 ### `consignToMerchant.js`
 
-Consigns an Umiña to the merchant: the merchant associates the token, the Treasury sends the NFT, the merchant gives UA an NFT allowance, and `ISSUED_TO_OWNER` is recorded. A stone mounted in an Achala is refused.
+Consigns an Umiña, or an Achala with its stones, to the merchant: the merchant associates the token(s), the Treasury sends the NFT(s) in one transfer, the merchant gives UA an NFT allowance on each, and one `ISSUED_TO_OWNER` is recorded. A stone mounted in an Achala is refused on its own.
 
 ```
-node src/consignment/consignToMerchant.js <serial> [--dry-run]
+NETWORK=testnet node src/consignment/consignToMerchant.js <serial> [--token umina|achala] [--dry-run]
 ```
 
 | Argument / option | Meaning |
 |---|---|
-| `<serial>` | The Umiña NFT serial, held by the Treasury. |
+| `<serial>` | The NFT serial in the class's token, held by the Treasury (with its stones, for an Achala). |
+| `--token umina\|achala` | The token class (default `umina`). An Achala moves with its stones; the merchant associates both tokens. |
 
 Hedera: [Approve an allowance](https://docs.hedera.com/native/accounts/approve-allowance), [Transfer tokens](https://docs.hedera.com/native/tokens/transfer).
 
 ### `sellConsigned.js`
 
-Sells a consigned Umiña in one transfer: the buyer pays, the merchant ends with 70% and UA with 30% after the royalty, and UA moves the NFT with the merchant's allowance. Records `SALE`.
+Sells a consigned Umiña, or a consigned Achala with its stones, in one transfer: the buyer pays once, the merchant ends with 70% and UA with 30% after the royalty, and UA moves the NFT(s) with the merchant's allowance. Records one `SALE`. The buyer must have associated the token(s) (`associateToken.js buyer [--token achala]`).
 
 ```
-node src/consignment/sellConsigned.js <serial> <price-hbar> [--dry-run]
+NETWORK=testnet node src/consignment/sellConsigned.js <serial> <price-hbar> [--token umina|achala] [--dry-run]
 ```
 
 | Argument / option | Meaning |
 |---|---|
-| `<serial>` | The Umiña NFT serial, held by the merchant. |
+| `<serial>` | The NFT serial in the class's token, held by the merchant (with its stones, for an Achala). |
+| `--token umina\|achala` | The token class (default `umina`). How the royalty applies to the N+1 NFTs of an Achala is checked on testnet ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)). |
 | `<price-hbar>` | The price in HBAR. `--dry-run` shows what each side is paid and ends with. |
 
 Hedera: [Transfer tokens](https://docs.hedera.com/native/tokens/transfer), [Custom token fees](https://docs.hedera.com/native/tokens/custom-fees).
 
 ### `endConsignment.js`
 
-Ends a consignment: the merchant revokes UA's allowance and returns the NFT to the Treasury, recorded as `TRANSFER`.
+Ends a consignment: the merchant revokes UA's allowance and returns the NFT(s) to the Treasury in one transfer, recorded as one `TRANSFER`. An Achala ends with its stones.
 
 ```
-node src/consignment/endConsignment.js <serial> [--keep] [--dry-run]
+NETWORK=testnet node src/consignment/endConsignment.js <serial> [--token umina|achala] [--keep] [--dry-run]
 ```
 
 | Argument / option | Meaning |
 |---|---|
-| `<serial>` | The Umiña NFT serial, held by the merchant. |
+| `<serial>` | The NFT serial in the class's token, held by the merchant (with its stones, for an Achala). |
+| `--token umina\|achala` | The token class (default `umina`). |
 | `--keep` | Only revoke the allowance: the merchant keeps the NFT and UA can no longer sell it. No event is recorded. |
 
 Hedera: [Delete an allowance](https://docs.hedera.com/native/accounts/adjust-allowance), [Transfer tokens](https://docs.hedera.com/native/tokens/transfer).

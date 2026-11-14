@@ -122,7 +122,7 @@ The fallback fee does **not** affect sales on marketplaces such as SentX. Those 
 
 The fallback fee is a fixed amount, not a percentage. It cannot capture a price paid off-chain, and it is also charged on genuine gifts.
 
-A fallback fee of about USD 3 in HBAR is **decided and in the code** ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)): `buildRoyaltyFee` in `umina-achala-chain/src/token/lib.js` sets it from `FALLBACK_FEE_HBAR` when the token is created. `node src/token/adminToken.js fees --fallback-hbar <hbar>` changes it later with the Fee Schedule Key ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)). See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
+A fallback fee of about USD 3 in HBAR is **decided and in the code** ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)): `buildRoyaltyFee` in `umina-achala-chain/src/token/lib.js` sets it from `FALLBACK_FEE_HBAR` when the token is created. `NETWORK=testnet node src/token/adminToken.js fees --fallback-hbar <hbar>` changes it later with the Fee Schedule Key ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)). See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
 
 ## UA's Own Items (No Consignment)
 
@@ -250,9 +250,9 @@ The flow above is implemented as testnet scripts in `umina-achala-chain/src`, to
 |---|---|---|---|---|
 | `mint/mintNFT.js` | 1 | Mints a new serial to the Treasury: records `COMPLIANCE`, pins the photos and metadata, mints, records `MINT` (see [mint-nft-token.md](mint-nft-token.md#current-implementation-phase-2-testnet)) | `TopicMessageSubmitTransaction`, `TokenMintTransaction` | Supply key |
 | `consignment/associateToken.js` | 2, 4 | Associates a token (Umiña, or Achala with `--token achala`) with the merchant or buyer account | `TokenAssociateTransaction` | That account |
-| `consignment/consignToMerchant.js` | 2, 3 | Associates the merchant (skipped if already done), transfers the serial from the Treasury to the merchant, has the merchant grant UA an NFT allowance, and records `ISSUED_TO_OWNER` ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)) | `TokenAssociateTransaction`, `TransferTransaction`, `AccountAllowanceApproveTransaction`, `TopicMessageSubmitTransaction` | Merchant, Treasury, merchant |
-| `consignment/sellConsigned.js` | 4 | Checks the merchant still holds the serial, settles the 70 / 30 sale and the NFT transfer in one transaction, and records `SALE` | `TokenNftInfoQuery`, `TransferTransaction`, `TopicMessageSubmitTransaction` | UA (payer and allowance spender), buyer |
-| `consignment/endConsignment.js` | | Ends a consignment: checks the merchant holds the serial, the merchant revokes UA's allowance and returns the NFT to the Treasury, and `TRANSFER` (reason `consignment_ended`) is recorded. `--keep` only revokes the allowance and records nothing ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)) | `TokenNftInfoQuery`, `AccountAllowanceDeleteTransaction`, `TransferTransaction`, `TopicMessageSubmitTransaction` | Merchant |
+| `consignment/consignToMerchant.js` | 2, 3 | Associates the merchant (skipped if already done), transfers the serial from the Treasury to the merchant, has the merchant grant UA an NFT allowance, and records `ISSUED_TO_OWNER` ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)). `--token achala`: the Achala and its stones, one transfer, one event ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)) | `TokenAssociateTransaction`, `TransferTransaction`, `AccountAllowanceApproveTransaction`, `TopicMessageSubmitTransaction` | Merchant, Treasury, merchant |
+| `consignment/sellConsigned.js` | 4 | Checks the merchant still holds the serial (mirror node), settles the 70 / 30 sale and the NFT transfer in one transaction, and records `SALE`. `--token achala`: the Achala and its stones for one payment ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)) | `TransferTransaction`, `TopicMessageSubmitTransaction` | UA (payer and allowance spender), buyer |
+| `consignment/endConsignment.js` | | Ends a consignment: checks the merchant holds the serial (mirror node), the merchant revokes UA's allowance and returns the NFT to the Treasury, and `TRANSFER` (reason `consignment_ended`) is recorded. `--keep` only revokes the allowance and records nothing ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)). `--token achala`: the Achala and its stones ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)) | `AccountAllowanceDeleteTransaction`, `TransferTransaction`, `TopicMessageSubmitTransaction` | Merchant |
 | `consignment/lib.js` | | Shared helpers: the 70 / 30 split, token association, and argument and environment checks | | |
 
 Every event goes through `src/hcs.js`, which signs it with `HCS_SUBMIT_KEY` when set and waits for the receipt ([chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17)). If an event fails after the NFT has already moved, the script says so and prints the transaction ID, so it can be recorded by hand.
@@ -273,7 +273,7 @@ UA is the operator account (`OPERATOR_ID`) in every script, so it pays all trans
    BUYER_KEY=…
    ```
 
-3. Create the token and the provenance topic, and set `UMINA_TOKEN_ID` and `HCS_TOPIC_ID` to their real IDs (`node src/token/createToken.js`, `node src/topic/createTopic.js provenance`; see [create-hcs-topic.md](create-hcs-topic.md)). Make sure `TREASURY_ID`, `SUPPLY_KEY` and `HCS_SUBMIT_KEY` are set. Until the topic exists, minting is refused on purpose.
+3. Create the token and the provenance topic, and set `UMINA_TOKEN_ID` and `HCS_TOPIC_ID` to their real IDs (`NETWORK=testnet node src/token/createToken.js`, `NETWORK=testnet node src/topic/createTopic.js provenance`; see [create-hcs-topic.md](create-hcs-topic.md)). Make sure `TREASURY_ID`, `SUPPLY_KEY` and `HCS_SUBMIT_KEY` are set. Until the topic exists, minting is refused on purpose.
 
 Run every command from `umina-achala-chain`. Each script takes `--dry-run`, which checks the arguments and environment and sends nothing.
 
@@ -281,22 +281,22 @@ Run every command from `umina-achala-chain`. Each script takes `--dry-run`, whic
 
 ```bash
 # 1. Mint: prints the new serial, e.g. 7. The NFT is in the Treasury.
-node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
+NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
 
 # 2. Consign: serial 7 moves to the merchant, UA may sell it, ISSUED_TO_OWNER is recorded.
-node src/consignment/consignToMerchant.js 7
+NETWORK=testnet node src/consignment/consignToMerchant.js 7
 
 # 3. The buyer associates the token (once per buyer account).
-node src/consignment/associateToken.js buyer
+NETWORK=testnet node src/consignment/associateToken.js buyer
 
 # 4. Sell for 100 HBAR: buyer -100, merchant +70, UA +30, NFT to the buyer, SALE recorded.
-node src/consignment/sellConsigned.js 7 100
+NETWORK=testnet node src/consignment/sellConsigned.js 7 100
 
 # Or, if the item does not sell: revoke the allowance and return it, TRANSFER recorded.
-node src/consignment/endConsignment.js 7
+NETWORK=testnet node src/consignment/endConsignment.js 7
 ```
 
-`node src/consignment/associateToken.js merchant` is also available, but `consignToMerchant.js` already associates the merchant.
+`NETWORK=testnet node src/consignment/associateToken.js merchant` is also available, but `consignToMerchant.js` already associates the merchant.
 
 After the sale, open the sale transaction ID on HashScan to see the royalty HTS deducted from the merchant. That answers the royalty item in [To Verify on Testnet](#to-verify-on-testnet).
 
@@ -331,7 +331,7 @@ await new AccountAllowanceApproveTransaction()
   .sign(merchantKey);
 ```
 
-**70 / 30 split.** Integer math in tinybars (1 HBAR = 100,000,000 tinybars). The commission is in basis points (3000 = 30.00%). The merchant receives the rest, so the two shares always add up to the price:
+**70 / 30 split.** Integer math in tinybars (1 HBAR = 100,000,000 tinybars). The commission is in basis points (3000 = 30.00%, `commissionBps` in `config/umina-achala.js`). The merchant receives the rest, so the two shares always add up to the price:
 
 ```js
 export const UA_SHARE_BPS = 3000n;
@@ -379,8 +379,8 @@ buildEvent(
 - **Listing watch.** `sellConsigned.js` checks the holder only at sale time. A mirror-node watch that removes listings once a serial leaves the merchant's account is not built. A proposed website ownership check is in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-sold-stones) ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)).
 - **Wallet-only sales.** No wallet screen can build the 70 / 30 sale, because UA must pay for and sign it as the allowance spender. See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#ua-sales-what-can-happen-in-a-wallet); the backend that would sign UA's side is [web #116](https://github.com/umina-achala/umina-achala-web/issues/116).
 - **Fiat sales and the fallback fee.** The fallback fee is in the code; how fiat buyers pay it is not decided.
-- **Network.** The scripts run on the network named by `NETWORK` (testnet when unset), with its env file and mirror node (`src/network.js`, [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29), done, on `main`). Mainnet is listed but not enabled until its keys and accounts are decided ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32)).
-- **Achala consignment.** The three consignment scripts take an Umiña serial only. Consigning an Achala with its stones, with `--token achala` on each script, is [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28), after the testnet minting ([chain #33](https://github.com/umina-achala/umina-achala-chain/issues/33)).
+- **Network.** The scripts run on the network named by `NETWORK`, with its env file and mirror node (`config/testnet.js`, `src/network.js`, [chain #29](https://github.com/umina-achala/umina-achala-chain/issues/29)). `NETWORK` has no default: a script refuses to run without `NETWORK=testnet` or `NETWORK=mainnet` ([chain #34](https://github.com/umina-achala/umina-achala-chain/issues/34), on the `refactor-v2` branch). Mainnet is listed but not enabled until its keys and accounts are decided ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32)).
+- **Achala consignment.** Built on the `refactor-v2` branch ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28), 2026-11-14): `--token achala` on the three consignment scripts moves the piece with its stones; a stone of it is refused on its own. How the royalty and fallback fee apply to the N+1 NFTs is checked in the testnet run ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)).
 - **Not run on testnet yet.** The tokens and topics exist (created 2026-11-10, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)); minting, consignment and sales are next. The items in [To Verify on Testnet](#to-verify-on-testnet) need a real run of the steps above, including whether the Treasury, as fee collector, is exempt from the fallback fee when `endConsignment.js` returns an NFT.
 
 Done since the last review (2026-11-05, now on `main`): every event is signed with the submit key and checked by its receipt ([chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17)); consignment is recorded as `ISSUED_TO_OWNER` and can be ended with `endConsignment.js`; `consignToMerchant.js` requires `TREASURY_KEY` when the Treasury is not the operator, with script tests ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)); UA's own items sell with `sellOwnItem.js` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)).

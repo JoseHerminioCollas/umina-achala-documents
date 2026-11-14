@@ -173,19 +173,19 @@ Run from `umina-achala-chain`. Creating a topic writes to Hedera, so the project
 2. Check the settings without sending anything:
 
    ```bash
-   node src/topic/createTopic.js provenance --dry-run
+   NETWORK=testnet node src/topic/createTopic.js provenance --dry-run
    ```
 
 3. Create the provenance topic:
 
    ```bash
-   node src/topic/createTopic.js provenance
+   NETWORK=testnet node src/topic/createTopic.js provenance
    ```
 
 4. Save the printed ID in `.env.testnet` as `HCS_TOPIC_ID`.
 5. Repeat with `display` when the display topic is needed, and save it as `HCS_DISPLAY_TOPIC_ID`.
 
-The full usage is `node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]`. The env file defaults to the network's own (`.env.testnet`; `NETWORK` chooses the network, testnet when unset), and a file given must name the network.
+The full usage is `NETWORK=testnet node src/topic/createTopic.js <provenance|display> [env-file] [--force] [--dry-run]`. The env file defaults to the network's own (`.env.testnet`; `NETWORK` chooses the network and is required), and a file given must name the network.
 
 ### What the Script Checks
 
@@ -247,10 +247,10 @@ What each script records in the provenance topic, as of 2026-11-06. Every event 
 |---|---|---|---|---|
 | `COMPLIANCE` | `mint/mintNFT.js` | Before the metadata is pinned; its transaction ID becomes `compliance_proof_hcs` in the metadata ([chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14)). `serials` is `[]` | Umiña: `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code`. Achala: `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids` | |
 | `MINT` | `mint/mintNFT.js` | After the mint | `ipfs_cid`; an Achala adds `from_stone_ids`, which records its stones as mounted ([chain #16](https://github.com/umina-achala/umina-achala-chain/issues/16)) | the mint transaction |
-| `ISSUED_TO_OWNER` | `consignment/consignToMerchant.js` | After the transfer to the merchant and the allowance | `to_id`, `allowance_ref` | the transfer |
+| `ISSUED_TO_OWNER` | `consignment/consignToMerchant.js` | After the transfer to the merchant and the allowance | `to_id`, `allowance_ref`; an Achala adds its stones (`from_stone_ids`, `umina_serials`, chain #28) | the transfer |
 | `SALE` | `consignment/sellConsigned.js`, `sale/sellOwnItem.js`, `record/recordEvent.js sale` | After an on-chain sale, or to record one made elsewhere (checked on the mirror node; a second `SALE` for the same `ref` is refused) | `seller_id`, `buyer_id`, `payment`, `sold_for`, `currency`, optional `payment_ref`; the consigned sale adds the split in tinybars | the transfer that moved the NFT |
 | `DELIVERED` | `record/recordEvent.js delivered` | The buyer has the piece (in person so far) | `buyer_id`, `method`, `delivered_at`, `proof` (`signed` or `none`), `proof_hash` when signed | the `SALE`'s transaction |
-| `TRANSFER` | `consignment/endConsignment.js` | An unsold consigned item goes back to the Treasury | `from_id`, `to_id`, `reason: "consignment_ended"` | the return transfer |
+| `TRANSFER` | `consignment/endConsignment.js` | An unsold consigned item goes back to the Treasury | `from_id`, `to_id`, `reason: "consignment_ended"`; an Achala adds its stones | the return transfer |
 | `BURN` | `token/adminToken.js wipe` / `burn` | A serial is wiped from a holder or burned in the Treasury; also the Achala of a piece taken apart: its `BURN` unmounts its stones (their Umiña NFTs are not burned), which can be mounted again | `reason`, `method`, `from_id` for wipe | the wipe or burn |
 
 Mounting and unmounting are recorded only in the Achala's own events (`MINT` and `BURN`); the stones get no events of their own (decided 2026-11-06).
