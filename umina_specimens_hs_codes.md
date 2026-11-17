@@ -132,6 +132,7 @@ These codes ensure that when an Umiña token is traded or exported
       "opal": { "hs_code": "7103.99.00.00", "description": "Worked Opal", "origin": "semi-precious" },
       "garnet": { "hs_code": "7103.99.00.00", "description": "Worked Garnet", "origin": "semi-precious" },
       "rhodonite": { "hs_code": "7103.99.00.00", "description": "Worked Rhodonite", "origin": "semi-precious" },
+      "fluorite": { "hs_code": "7103.99.00.00", "description": "Worked Fluorite (polished; raw fluorspar is 2529.21/2529.22)", "origin": "semi-precious" },
       "leopard_jasper": { "hs_code": "7103.99.00.00", "description": "Worked Leopard Jasper", "origin": "semi-precious" },
       "rosophia": { "hs_code": "7103.99.00.00", "description": "Worked Rosophia", "origin": "semi-precious" },
       "turquoise": { "hs_code": "7103.99.00.00", "description": "Worked Turquoise", "origin": "semi-precious" },
