@@ -822,6 +822,32 @@ NETWORK=testnet node src/consignment/endConsignment.js <serial> [--token umina|a
 
 Hedera: [Delete an allowance](https://docs.hedera.com/native/accounts/adjust-allowance), [Transfer tokens](https://docs.hedera.com/native/tokens/transfer).
 
+## Testnet tools
+
+Tools for the testnet run that sign as the test merchant and buyer. They refuse any `NETWORK` but `testnet` before the env file is read: on mainnet UA never holds those keys.
+
+### `transferBetweenWallets.js`
+
+A wallet-to-wallet transfer between the test merchant and the test buyer, **signed by both**: a sale made elsewhere ([chain #40](https://github.com/umina-achala/umina-achala-chain/issues/40)). A wallet's plain **Send** signs with the sender only and fails with `INVALID_SIGNATURE`, because the token's fallback fee is charged to the receiver when no HBAR moves.
+
+```
+NETWORK=testnet node src/testnet/transferBetweenWallets.js 5 --from merchant --dry-run              # no HBAR: the buyer pays the fallback fee
+NETWORK=testnet node src/testnet/transferBetweenWallets.js 3 --from merchant --hbar 0.00000001      # 1 tinybar: royalty 0, no fallback fee
+NETWORK=testnet node src/testnet/transferBetweenWallets.js 3,4 --from buyer --hbar 10               # two stones of one token: one royalty
+NETWORK=testnet node src/testnet/transferBetweenWallets.js 2 --token achala --from buyer           # the Achala with its stones
+```
+
+| Argument / option | Meaning |
+|---|---|
+| `<serial>[,<serial>...]` | The NFT serial. Several Umiña serials move in one transfer; an Achala takes one. |
+| `--from merchant\|buyer` | The sender (`MERCHANT_ID`/`MERCHANT_KEY` or `BUYER_ID`/`BUYER_KEY`). It is the operator and pays the network fee. |
+| `--to merchant\|buyer` | The receiver, who also signs. Defaults to the other wallet. |
+| `--token umina\|achala` | The token class (default `umina`). An Achala moves with every Umiña in it (from its `MINT`); an Umiña mounted in an Achala is refused. |
+| `--hbar <amount>` | The receiver pays this to the sender in the same transaction, so the royalty applies to it. Without it no HBAR moves and the receiver pays the fallback fee. |
+| `--dry-run` | Reads the topic and the holders and sends nothing. |
+
+Before sending it checks on the mirror node that the sender holds every NFT. After the transfer it prints the custom fees assessed, and the `recordEvent.js sale` command that records it (one NFT per `SALE`, so not for several stones). It records nothing itself.
+
 ## Hedera Documentation
 
 The Hedera pages behind the scripts, from the [Hedera documentation](https://docs.hedera.com) (Native SDKs):
