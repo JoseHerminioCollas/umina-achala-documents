@@ -563,7 +563,8 @@ A mint writes to three places: HCS, IPFS (through Pinata) and the token. They ha
   - `images` (optional): up to 20 more photos ([chain #35](https://github.com/umina-achala/umina-achala-chain/issues/35); metadata is immutable, so add every photo at the mint).
   - `documents` (optional): receipts, permits and 3D scans, `.pdf` or `.glb`.
 - **Form post** (`--form <post-file>`): a JSON file standing in for the mint form. The script copies the class's template (`json/umina-template.json` or `json/achala-template.json`), fills it from the post, and writes it to `<out>/<stone_id>.json` (default `generated/`):
-  - `name`, `description` and `creator` go to the top level (`creator` stays the template's, Umiña Achala, unless the post sets it to the seller or artisan).
+  - `description` and `creator` go to the top level (`creator` stays the template's, Umiña Achala, unless the post sets it to the seller or artisan).
+  - The post has **no `name`**: the mint builds it from the type and the `stone_id` ("Opal · UMINA-2026-OP-01", "Pendant, chrysocolla in silver · ACHALA-2026-PE-01") and refuses a post or metadata file that types one, as `validateMetadata.js` does ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)).
   - `attributes` (a map) becomes `attributes` pairs.
   - Every other field goes under `properties`.
   - Upload paths are made absolute, and empty fields (`null` or `""`) are removed, so a missing compliance field fails validation instead of passing as an empty string.
@@ -595,10 +596,12 @@ What is pinned is the metadata with:
 
 - `main_image`, `images` and `documents` removed.
 - `image` = `ipfs://<CID of 01-display.jpg>`, and `type` = `image/jpeg`. Wallets and marketplaces show `image`.
+- Each `properties.certifications[].document` = the `ipfs://` URI of that report, which must be one of the `documents` ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)).
 - `files[]`: one entry per master (`uri`, `type`, `checksum` (its SHA-256), `metadata.description`; the main one has `is_default_file: true`), then one per document. The web site and the app fetch the masters and resize them, so no thumbnails are made.
 - `properties.compliance_proof_hcs` = the `COMPLIANCE` transaction ID, and `properties.hcs_compliance_topic` = `HCS_TOPIC_ID`.
+- `name`, built from the type and the `stone_id` ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)); an Achala's stones are named by type from their `COMPLIANCE` events.
 - The attributes wallets show, written from the data, replacing any hand-written ones with the same `trait_type`:
-  - Umiña: `Stone Type`, `Materials` and `Form`, from `schema/stone-types.json`.
+  - Umiña: `Stone Type`, `Materials` and `Form`, from `schema/stone-types.json`; with `certifications`, `Certified by` (the issuers) and `Certified grade` (from a certificate covering quality; with two, each grade names its issuer) ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)).
   - Achala: `Piece Type`, `Metal`, `Stones` (each stone's type name, from its `COMPLIANCE` event) and `Artisan`.
 - An Achala's `properties.umina_token_id` filled from `UMINA_TOKEN_ID`. Any other value is refused.
 
@@ -670,7 +673,7 @@ A message must fit in one HCS message, **1024 bytes** of JSON. A larger event is
 
 | Event | Recorded by | Its own fields |
 |---|---|---|
-| `COMPLIANCE` | `mintNFT.js`, before pinning | Umiña: `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code`. Achala: `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids`. |
+| `COMPLIANCE` | `mintNFT.js`, before pinning | Umiña: `stone_type`, `vendor_ruc`, `mining_concession`, `reinfo_id`, `hs_code`, and `certifications` (`issuer`, `report_no` of each) when the stone has any ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)). Achala: `piece_type`, `artisan_rna`, `vendor_ruc`, `hs_code`, `from_stone_ids`. |
 | `MINT` | `mintNFT.js`, after the mint | `ipfs_cid` (the metadata). An Achala adds `from_stone_ids`. `ref` is the mint transaction. |
 | `ISSUED_TO_OWNER` | `consignToMerchant.js` | `to_id` (the merchant) and `allowance_ref` (the allowance transaction). `ref` is the transfer to the merchant. An Achala adds `stone_id`, `from_stone_ids`, `umina_token_id` and `umina_serials`. |
 | `SALE` | `sellOwnItem.js`, `sellConsigned.js`, `recordEvent.js sale` | `seller_id`, `buyer_id`, `payment` (`on_chain` or `off_chain`) and the price (`sold_for`). An Achala adds `from_stone_ids`, `umina_token_id` and `umina_serials`. `ref` is the transfer. |

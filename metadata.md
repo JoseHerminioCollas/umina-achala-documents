@@ -31,7 +31,7 @@ The mint's input file names its photos in `main_image` and `images` and its docu
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `name` | String | Public identifier (e.g., "Umiña Stone #003 - Chrysocolla"). |
+| `name` | String | Built by the mint from the stone type and `stone_id`, e.g. "Chrysocolla · UMINA-2026-CH-03"; never typed in the post ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)). |
 | `creator` | String | The seller or the artisan, as the merchant chooses; "Umiña Achala" for UA's own items. Set from the mint form ([chain #31](https://github.com/umina-achala/umina-achala-chain/issues/31)). |
 | `description` | String | Narrative of provenance, geology, and compliance. |
 | `image` | URI | Immutable IPFS link to the primary visual asset. |
@@ -103,7 +103,7 @@ The `attributes` array uses `trait_type` and `value` pairs:
 
 ```json
 {
-  "name": "Umiña Stone #003 - Chrysocolla",
+  "name": "Chrysocolla · UMINA-2026-CH-03",
   "creator": "Umiña Achala",
   "description": "Certified Mine-to-Market Chrysocolla. Extracted from Arequipa Region with verified ethical provenance and full regulatory compliance.",
   "image": "ipfs://QmChrysocollaThumbnailHash",
