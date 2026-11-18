@@ -798,7 +798,7 @@ NETWORK=testnet node src/consignment/sellConsigned.js <serial> <price-hbar> [--t
 | Argument / option | Meaning |
 |---|---|
 | `<serial>` | The NFT serial in the class's token, held by the merchant (with its stones, for an Achala). |
-| `--token umina\|achala` | The token class (default `umina`). How the royalty applies to the N+1 NFTs of an Achala is checked on testnet ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)). |
+| `--token umina\|achala` | The token class (default `umina`). With `achala`, `sellConsigned.js` sizes the merchant's leg for two royalties, one per token (77.78 / 22.22 on 100, then 70 / 30; [chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28), `achala-split-k2` branch). |
 | `<price-hbar>` | The price in HBAR. `--dry-run` shows what each side is paid and ends with. |
 
 Hedera: [Transfer tokens](https://docs.hedera.com/native/tokens/transfer), [Custom token fees](https://docs.hedera.com/native/tokens/custom-fees).
