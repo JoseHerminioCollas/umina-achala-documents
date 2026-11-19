@@ -18,10 +18,10 @@
     - [Why a Wallet Alone Cannot Make UA's Sale](#why-a-wallet-alone-cannot-make-uas-sale)
     - [Sale Options](#sale-options)
     - [UA Selling Its Own Items Wallet to Wallet](#ua-selling-its-own-items-wallet-to-wallet)
-  - [Website: Showing Sold Stones](#website-showing-sold-stones)
+  - [Website: Showing What Is for Sale](#website-showing-what-is-for-sale)
     - [Current State](#current-state)
-    - [Mirror Node Ownership Check](#mirror-node-ownership-check)
-    - [Where It Goes in the Code](#where-it-goes-in-the-code)
+    - [The Catalog: Built From the Chain](#the-catalog-built-from-the-chain)
+    - [How the Site Learns of a Sale Made Elsewhere](#how-the-site-learns-of-a-sale-made-elsewhere)
     - [Failure Behavior](#failure-behavior)
   - [Open Decisions](#open-decisions)
   - [Code and Issue Reference](#code-and-issue-reference)
@@ -30,7 +30,7 @@
 
 > **Status: Phase 2 (testnet), in progress.** The code referred to here is in `umina-achala-chain` (on `main`, fork and upstream since 2026-11-09) and `umina-achala-web`, as of 2026-11-06. Code is referred to by file and function, not line number. The testnet tokens and topics were created on 2026-11-10 ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)); minting and sales are next. Work that is not built is tracked in the issues listed in [Code and Issue Reference](#code-and-issue-reference).
 
-This document explains how an Umiña NFT moves between accounts once it exists: plain wallet-to-wallet transfers, sales by UA, and what happens after the NFT is held by someone other than UA. It also covers what the ledger records, when the royalty is paid, and how the website can tell which stones have sold.
+This document explains how an Umiña NFT moves between accounts once it exists: plain wallet-to-wallet transfers, sales by UA, and what happens after the NFT is held by someone other than UA. It also covers what the ledger records, when the royalty is paid, and how the website shows only what UA has for sale.
 
 The consignment flow (merchant holds the NFT, UA sells through an allowance, 70 / 30 split) is described in [consignment.md](consignment.md). Token creation is in [create-nft-token.md](create-nft-token.md) and minting in [mint-nft-token.md](mint-nft-token.md).
 
@@ -194,71 +194,51 @@ What this leaves out:
 |---|---|
 | **Trust and order** | Two separate transactions, not one atomic one. Payment first protects UA |
 | **HCS record** | `NETWORK=testnet node src/record/recordEvent.js sale <serial> --seller <Treasury> --buyer <id> --nft-tx <tx> --payment on_chain --payment-tx <tx> [--sold-for <hbar>]` checks both transactions on the mirror node (the NFT moved, the buyer paid, the amount matches) and posts `SALE`, refusing a duplicate ([chain #8](https://github.com/umina-achala/umina-achala-chain/issues/8)). The atomic alternative is `src/sale/sellOwnItem.js` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)) |
-| **Website listing** | The site does not know the stone sold (see [Website: Showing Sold Stones](#website-showing-sold-stones), [web #115](https://github.com/umina-achala/umina-achala-web/issues/115)) |
+| **Website listing** | The site removes the stone on the next page load, from the mirror node holder (see [Website: Showing What Is for Sale](#website-showing-what-is-for-sale), [web #115](https://github.com/umina-achala/umina-achala-web/issues/115)) |
 | **Other listings** | If the stone is also listed on SentX, delist it, or confirm SentX drops the listing once the NFT moves |
 | **Treasury key in a wallet** | Selling from a wallet means the Treasury key is in HashPack or similar on a device. That key also collects royalties and holds unsold stock. A hardware wallet is safer |
 | **Royalty** | None, but Treasury sales are expected to be exempt anyway |
 
 This does **not** work for consigned NFTs. They are in the merchant's account, and UA only has an allowance, which wallets cannot spend. Either the merchant sends the NFT, or UA uses `sellConsigned.js` or Option 1. A manual consigned sale also means paying the merchant's 70% in a separate transfer, which the HCS record should link too.
 
-## Website: Showing Sold Stones
+## Website: Showing What Is for Sale
+
+**Decided 2026-11-19 ([web #15](https://github.com/umina-achala/umina-achala-web/issues/15)):** the site shows **only what UA has for sale**, and only testnet NFTs in Phase 2B. A sold item is removed; there are no "Sold" badges. The chain is the source of truth.
 
 ### Current State
 
-- The marketplace reads its listings from `frontend/src/data/uminas.json`, bundled into the build. It has no sale status and nothing on the site checks the chain. After any sale (wallet to wallet, SentX or `sellConsigned.js`), the stone stays listed until the JSON is edited and the site is redeployed.
-- None of the 30 stones in `uminas.json` has a `tokenId` or `serialNumber`, and the `Umina` type (`frontend/src/types/umina.ts`) does not define them. `StoneModal.tsx` already reads them for its HashScan link, so that link never shows.
-- `StoneModal.tsx` hardcodes `mainnet` in the HashScan link.
+The marketplace still reads 30 demo stones from `frontend/src/data/uminas.json`, bundled into the build, with no `tokenId` or serial and no check against the chain. They are removed in [web #125](https://github.com/umina-achala/umina-achala-web/issues/125).
 
-Two ways to mark sold stones:
+### The Catalog: Built From the Chain
 
-1. **By hand:** add a status to each stone in `uminas.json`, set it after each sale, and redeploy. Simple, but easy to forget, and it lags behind sales.
-2. **Ask the chain:** the site checks each serial's current holder on the mirror node. **Recommended:** it catches every sale wherever it happened, with no step after selling.
+A script run by hand ([chain #44](https://github.com/umina-achala/umina-achala-chain/issues/44)) builds the site's `catalog.json` from the mirror node, IPFS and the two HCS topics; the site loads it at run time ([web #89](https://github.com/umina-achala/umina-achala-web/issues/89)). An NFT is in the catalog when all of these hold:
 
-### Mirror Node Ownership Check
+- it is not deleted (burned or wiped);
+- a **seller account** holds it: the Treasury, or a consigning merchant;
+- for a merchant's NFT, UA's **NFT allowance** on the serial still exists. A merchant who revoked it is selling elsewhere, and UA cannot sell it;
+- its latest display event is `LISTED`, which carries the price ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43)).
 
-Tracked in [web #115](https://github.com/umina-achala/umina-achala-web/issues/115).
+Anything else is left out: sold, transferred, burned, unlisted, or a stone mounted in an Achala (listed with its Achala).
 
-**Prerequisite:** each minted stone in `uminas.json` gets its `tokenId` and `serialNumber`, and the `Umina` type defines them ([web #89](https://github.com/umina-achala/umina-achala-web/issues/89)). Stones that are not minted have nothing to check.
+### How the Site Learns of a Sale Made Elsewhere
 
-1. **One request for the whole collection.** When the marketplace loads, the site fetches the token's NFTs from the public mirror node:
+The catalog is only as current as its last build. In between, the site checks the mirror node on each page load ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)):
 
-   ```
-   GET https://mainnet.mirrornode.hedera.com/api/v1/tokens/<tokenId>/nfts?limit=100
-   ```
+| What happened | What the mirror node shows | Site |
+|---|---|---|
+| Sold on UA's site | New holder | Hidden at once in the buyer's browser; for everyone on the next page load |
+| Merchant sold on SentX, or sent the NFT wallet to wallet | New holder (UA's allowance is cleared by the transfer) | Hidden on the next page load |
+| Merchant revoked UA's allowance | Same holder, no allowance to UA | Hidden on the next page load |
+| Burned or wiped | `deleted` | Hidden |
+| Merchant sold the physical piece and has not moved the NFT | Nothing changes | Still listed: the chain cannot know. The consignment agreement requires the merchant to tell UA, and UA posts `UNLISTED` |
 
-   Each entry has `serial_number`, the current holder `account_id`, and `deleted`. Follow `links.next` while there are more pages. No per-serial requests are needed.
-
-2. **Decide the status.** A config list of seller accounts holds the Treasury and any merchants with consigned stones.
-
-   | Condition | Status |
-   |---|---|
-   | Held by a seller account | Available |
-   | Held by any other account | Sold |
-   | `deleted` is true (burned or wiped) | Unavailable |
-   | No serial in `uminas.json` | Not minted |
-
-3. **Show it.** Cards get a "Sold" badge, and a filter shows only available stones. Sold stones stay visible as part of the gallery and provenance, and keep their HashScan link. The stone detail hides any buy or contact action for a sold stone.
-
-### Where It Goes in the Code
-
-| File | Change |
-|---|---|
-| `frontend/src/config.ts` | Network (mainnet or testnet), mirror node URL, token ID, seller account list. Also used by the HashScan link in `StoneModal.tsx:66` instead of the hardcoded `mainnet` ([web #75](https://github.com/umina-achala/umina-achala-web/issues/75)) |
-| `frontend/src/types/umina.ts`, `data/uminas.json` | `tokenId` and `serialNumber` per minted stone |
-| New hook, `useOwnership` | Fetches once per page load and returns serial → status, with loading and error state |
-| `data/UminaFacade.ts` | Unchanged. It stays the static data source, and the hook adds status on top, so existing tests keep working |
-| `Marketplace.tsx`, `Card.tsx`, `Filters.tsx`, `StoneModal.tsx` | Sold badge, "available only" filter, no buy action on sold stones |
-| `locales/en.json`, `locales/es.json` | Text for "Sold" and the filter |
-
-The public mirror node needs no API key and should allow requests from the browser, so this works on the current static site with no backend. Confirm this on the first test request.
+Requests: `GET /api/v1/tokens/<tokenId>/nfts?limit=100` for each token (follow `links.next`), and `GET /api/v1/accounts/<merchant>/allowances/nfts?token.id=<tokenId>` for each merchant with listed items. The public mirror node needs no API key; confirm that it allows browser requests on the first test. Changes show within seconds of consensus.
 
 ### Failure Behavior
 
-If the mirror node is slow or down, the site shows the listing exactly as it does today, with no badges. It does not block the page or mark everything sold. A sale shows up once the mirror node has caught up, normally within seconds.
+If the mirror node is slow or down, the site shows the catalog as built and does not block the page. The sale backend ([web #116](https://github.com/umina-achala/umina-achala-web/issues/116)) checks the holder and allowance again before building a sale, so a stale listing cannot be sold.
 
-**What this does not do:** record the sale (that is still the HCS script), or keep the seller list up to date when merchants join or leave consignment.
-
-**Relation to the display topic.** The data model ([chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10)) plans an HCS display topic (`LISTED`, `UNLISTED`) for what UA puts up for sale. The ownership check also catches sales that happened outside UA. Whether the site uses both is open in [web #115](https://github.com/umina-achala/umina-achala-web/issues/115).
+**What this does not do:** record a sale (that is the HCS `SALE` event), or keep the seller list up to date when merchants join or leave consignment.
 
 **Status:** not built.
 
@@ -273,11 +253,12 @@ If the mirror node is slow or down, the site shows the listing exactly as it doe
 
 **Decided (2026-11-09, [web #90](https://github.com/umina-achala/umina-achala-web/issues/90)):** the merchant owns a consigned item and holds its NFT and the physical item, and may sell it anywhere. UA's 30% (royalty included) applies to sales on UA's site; other on-chain sales pay the royalty; an off-chain sale ends with the merchant sending the NFT to the buyer, who pays the fallback fee. The merchant pays the artisan separately for labor, not in the sale. See [consignment.md](consignment.md#decisions-2026-11-09).
 
+**Decided (2026-11-19, [web #15](https://github.com/umina-achala/umina-achala-web/issues/15)):** the website uses both. The display topic (`LISTED`) says what UA has for sale and at what price; the mirror node holder and allowance remove anything sold or no longer sellable. Only items for sale are shown, with no "Sold" badge. See [Website: Showing What Is for Sale](#website-showing-what-is-for-sale).
+
 **Decision not made yet:**
 
 - Separate keys or multi-signature for mainnet ([chain #32](https://github.com/umina-achala/umina-achala-chain/issues/32), Phase 3).
 - Where the Treasury key lives if UA sells from a wallet.
-- Whether the website uses the ownership check, the display topic, or both ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)).
 
 ## Code and Issue Reference
 

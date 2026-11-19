@@ -24,7 +24,7 @@ The Umiña Achala application blends compliance transparency with cultural story
   - Cut (Brilliant, Cabochon, Emerald, Princess, Custom)
   - Certification (Fair Trade, Sustainability)
   - Compliance Status (Verified, Pending, Not Applicable)
-  - Availability (available only), from the mirror node ownership check in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-sold-stones)
+  - No availability filter: only items for sale are shown, and sold items are removed (see [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-what-is-for-sale))
 - **Sold Stones:** Stay visible with a "Sold" badge and their HashScan link, with no buy action.
 - **Stone Card Preview:**
   - Image of stone/mount

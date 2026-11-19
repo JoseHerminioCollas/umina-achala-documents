@@ -75,7 +75,7 @@ Move to gRPC streaming if you want live updates in the frontend (e.g., “this N
 
 Always reconcile JSON with Mirror Node, since that’s the source of truth for ownership and state.
 
-A worked-out proposal for marking sold stones on the marketplace with a mirror node ownership check is in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-sold-stones).
+How the marketplace shows only what UA has for sale (a catalog built from the chain, and a mirror node check that hides sold items) is in [nft-transfers-and-sales.md](nft-transfers-and-sales.md#website-showing-what-is-for-sale).
 
 <h2><a href="ca://s?q=Switch_to_Hedera_mainnet">Switch to mainnet</a></h2>
 <ul>
