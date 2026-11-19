@@ -14,6 +14,7 @@ How to run the scripts in `umina-achala-chain`, what each command-line option do
 - [Minting](#minting): `mintNFT.js`
 - [HCS Events](#hcs-events): the envelope, each event, the display topic, signing, reading the topic
 - [Listing](#listing): `displayEvent.js`
+- [Catalog](#catalog): `buildCatalog.js`, the site's `catalog.json`
 - [Sales](#sales): `sellOwnItem.js`, `recordEvent.js`
 - [Consignment](#consignment): `associateToken.js`, `consignToMerchant.js`, `sellConsigned.js`, `endConsignment.js`
 - [Hedera Documentation](#hedera-documentation)
@@ -721,7 +722,7 @@ The mirror node can be a few seconds behind consensus. A script run straight aft
 
 ### `displayEvent.js`
 
-Records what UA has for sale on its site, and at what price, on the display topic ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43)). The site's catalog ([chain #44](https://github.com/umina-achala/umina-achala-chain/issues/44)) lists an item only while it is listed. It never moves an NFT or HBAR. Phase 2B: only items the Treasury holds, no consignment.
+Records what UA has for sale on its site, and at what price, on the display topic ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43)). The site's catalog (`buildCatalog.js`, [below](#catalog)) lists an item only while it is listed. It never moves an NFT or HBAR. Phase 2B: only items the Treasury holds, no consignment.
 
 ```
 NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <hbar> [--token umina|achala] [--dry-run]
@@ -757,6 +758,58 @@ NETWORK=testnet node src/display/displayEvent.js status
 ```
 
 Needs `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID`, `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID`, `HCS_TOPIC_ID`, `HCS_DISPLAY_TOPIC_ID` and, when the topic's submit key is not the operator key, `HCS_SUBMIT_KEY`. Each event costs about USD 0.001, paid by the operator.
+
+## Catalog
+
+### `buildCatalog.js`
+
+Builds the site's catalog, `catalog.json`, from the chain and IPFS ([chain #44](https://github.com/umina-achala/umina-achala-chain/issues/44)). It is a cache: never edited by hand, and it can be deleted and rebuilt at any time. Run it by hand after a mint, a listing change or a sale, then publish the file ([web #89](https://github.com/umina-achala/umina-achala-web/issues/89)). It only reads: nothing is sent to Hedera, and it needs no key.
+
+```
+NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> [--dry-run]
+```
+
+| Option | Meaning |
+|---|---|
+| `<out-dir>` | The folder for `catalog.json`, e.g. `../umina-achala-web/frontend/public/data` for the site in development. |
+| `--dry-run` | Print what would be in the catalog, and write nothing. |
+
+**What is in it: only what UA has for sale** (Phase 2B: the Treasury). No sold items and no "Sold" badge. An NFT is in the catalog when:
+
+- it is not burned or wiped;
+- the Treasury holds it;
+- it has a `MINT` on the provenance topic;
+- it is not an Umiña mounted in an Achala that still exists (it is sold inside its Achala);
+- its latest display event since it last arrived in the Treasury is `LISTED`, which gives the price. An item sold and returned is listed again by hand.
+
+An Achala is in only when the Treasury still holds each of its stones. The run prints what is in, and what is left out with the reason.
+
+**Metadata** is read through the IPFS gateway, Pinata's public one by default (`IPFS_GATEWAY` in the env file changes it), tried 3 times. A CID already in the previous `catalog.json` in `<out-dir>` is not read again: an IPFS file never changes. Each file is checked against its schema; an item whose metadata is not valid is left out, with a warning.
+
+**Failures:** if the mirror node or the gateway fails, the build stops and the old catalog stays. The file is written to `catalog.json.tmp`, then renamed.
+
+**The file** (`schema/catalog-schema.json`, copied to umina-achala-web):
+
+| Field | Holds |
+|---|---|
+| `schema_version`, `network`, `built_at` | `1`, `testnet`, when it was built |
+| `source` | The mirror node, gateway, token and topic IDs, the Treasury, and the last sequence number read from each topic |
+| `items[]` | Sorted by kind (`umina`, then `achala`) and serial |
+| `items[].kind`, `stone_id`, `token_id`, `serial` | The item |
+| `items[].metadata_cid`, `metadata` | Its HIP-412 metadata, as pinned |
+| `items[].price` | `amount`, `currency` (HBAR), `listed_seq` and `listed_at` of its `LISTED` |
+| `items[].events[]` | Its provenance events (`seq`, `consensus_timestamp`, `event`): the `COMPLIANCE` before its `MINT`, its own events, and for a stone the Achala pieces it was mounted in |
+| `items[].stones[]` | An Achala only: each mounted stone with its metadata and events |
+
+Two builds with no change on the chain differ only in `built_at`.
+
+Example, after listing agate A and Achala G (above):
+```bash
+NETWORK=testnet node src/catalog/buildCatalog.js ../umina-achala-web/frontend/public/data --dry-run
+NETWORK=testnet node src/catalog/buildCatalog.js ../umina-achala-web/frontend/public/data
+```
+
+Needs `TREASURY_ID`, `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID`, `HCS_TOPIC_ID` and `HCS_DISPLAY_TOPIC_ID`. Costs nothing.
 
 ## Sales
 
