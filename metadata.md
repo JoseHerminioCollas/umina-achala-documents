@@ -10,8 +10,8 @@ The schema is `schema/hip412-umina-schema.json` in **`umina-achala-chain`**, the
 
 | Field | Now |
 |---|---|
-| `image` | The **1080 px display version** of the main photo (JPEG): what wallets and marketplaces show |
-| `files[]` | One entry per **full-size photo master** (EXIF and GPS stripped), each with a SHA-256 `checksum`; the main photo's is `is_default_file`. Then the documents (receipts, permits). The web site and mobile app resize the masters themselves |
+| `image` | The **main photo**, at most 1600 px: a PNG with a reduced palette when it has transparency, else a JPEG; what wallets and marketplaces show ([chain #42](https://github.com/umina-achala/umina-achala-chain/issues/42)) |
+| `files[]` | One entry per **other photo** (same format rules, EXIF and GPS stripped), each with a SHA-256 `checksum`; the main photo is not repeated here. Then the documents (receipts, permits). The web site and mobile app resize the photos themselves |
 | `properties.stone_id` | Required, `UMINA-YYYY-XX-NN` |
 | `properties.stone_type` | **New, required:** an id from `schema/stone-types.json` (curated types plus the IMA mineral species); no "other", no fossils |
 | `properties.materials` | **New, optional:** the materials of a multi-material specimen, `{ stone_type, role: host \| inclusion, form, weight_g }`, exactly one host |

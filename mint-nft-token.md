@@ -80,12 +80,14 @@ If something fails after pinning, the pinned CIDs are listed so they can be unpi
 | Fields | `main_image` (required) and `images` (up to 20 more, [chain #35](https://github.com/umina-achala/umina-achala-chain/issues/35)), each `{ file, description }`; a photo listed twice is refused |
 | Accepted | JPEG, PNG or WebP, checked by the real file type; up to 25 MB and about 100 megapixels |
 | Refused | GIF, HEIC (export iPhone photos as JPEG), RAW |
-| Master, every photo | full size, the upload's format (JPEG and WebP at quality 95, PNG lossless); a `files[]` entry with its SHA-256 `checksum`; the main photo's master is the default file |
-| Display, main photo only | 1080 px on the long side, JPEG quality 82, never enlarged; becomes `image`, which wallets and marketplaces show |
-| Privacy | every version is turned upright and written **without EXIF, XMP or GPS**, so no location of a mine reaches IPFS |
-| Thumbnails | none: the web site and the mobile app fetch the masters and resize them as they need (decided 2026-11-05) |
+| One file per photo | at most 1600 px on the long side, never enlarged ([chain #42](https://github.com/umina-achala/umina-achala-chain/issues/42), 2026-11-19) |
+| Format | a photo with transparency (a cut-out): PNG with a reduced palette, quality 90, slightly lossy, so a wallet shows it on its own theme; a photo without: JPEG quality 82 |
+| `main_image` | becomes `image`, which wallets and marketplaces show; not repeated in `files[]`, so HashPack shows it once |
+| `images` | one `files[]` entry each, with its SHA-256 `checksum` |
+| Privacy | every file is turned upright and written **without EXIF, XMP or GPS**, so no location of a mine reaches IPFS |
+| Thumbnails | none: the web site and the mobile app resize what they need (decided 2026-11-05) |
 
-Receipts and permits go in `documents` (PDF or GLB) and are pinned as they are, as `files[]` entries after the masters.
+Receipts and permits go in `documents` (PDF or GLB) and are pinned as they are, as `files[]` entries after the photos.
 
 ### Metadata Rules
 

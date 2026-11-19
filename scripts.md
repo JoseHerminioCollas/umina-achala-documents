@@ -177,10 +177,9 @@ NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json --ima
 ```
 ✅ Metadata file generated from testnet/chrysocolla_a.json: generated/UMINA-2026-CH-99.json
 ✅ Metadata for UMINA-2026-CH-99 are valid.
-✅ Made generated/UMINA-2026-CH-99/01-master.jpg (image/jpeg, 1080×1080)
-✅ Made generated/UMINA-2026-CH-99/01-display.jpg (image/jpeg, 1080×1080)
-✅ Made generated/UMINA-2026-CH-99/02-master.jpg (image/jpeg, 300×300)
-Would pin generated/UMINA-2026-CH-99/01-master.jpg (image/jpeg)
+✅ Made generated/UMINA-2026-CH-99/01.png (image/png, 1080×1080)
+✅ Made generated/UMINA-2026-CH-99/02.png (image/png, 300×300)
+Would pin generated/UMINA-2026-CH-99/01.png (image/png)
 ...
 Would pin this metadata (CIDs pending):
 { ... }
@@ -193,7 +192,7 @@ NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
 ```
 ```
 ✅ COMPLIANCE recorded for UMINA-2026-CH-99: 0.0.<operator>@<time>
-✅ Pinned 01-master.jpg: ipfs://<cid>
+✅ Pinned 01.png: ipfs://<cid>
 ...
 ✅ Metadata pinned to IPFS: ipfs://<metadata-cid>
 ✅ Minted Umiña NFT serials: 1 (0.0.<operator>@<time>)
@@ -559,7 +558,7 @@ A mint writes to three places: HCS, IPFS (through Pinata) and the token. They ha
 #### The input: a metadata file or a form post
 
 - **Metadata file** (`NETWORK=testnet node src/mint/mintNFT.js <file>`): a HIP-412 JSON file with no `image` or `files` of its own. It names its photos and documents in input-only fields, each with a `file` (a path relative to the metadata file) and a `description`:
-  - `main_image` (required): its display version becomes `image`, and its master the default file.
+  - `main_image` (required): becomes `image`, and is not repeated in `files[]` ([chain #42](https://github.com/umina-achala/umina-achala-chain/issues/42)).
   - `images` (optional): up to 20 more photos ([chain #35](https://github.com/umina-achala/umina-achala-chain/issues/35); metadata is immutable, so add every photo at the mint).
   - `documents` (optional): receipts, permits and 3D scans, `.pdf` or `.glb`.
 - **Form post** (`--form <post-file>`): a JSON file standing in for the mint form. The script copies the class's template (`json/umina-template.json` or `json/achala-template.json`), fills it from the post, and writes it to `<out>/<stone_id>.json` (default `generated/`):
@@ -581,23 +580,23 @@ Each photo is checked from its file header before anything is written:
 - At most 25 MB and about 100 megapixels.
 - Each photo listed once.
 
-Then they are re-encoded with sharp into `generated/<stone_id>/`. Each is turned upright from its EXIF orientation and written **without any metadata**, so no EXIF or GPS location of a mine reaches IPFS:
+Then each photo becomes **one file** in `generated/<stone_id>/`, `01` for `main_image` and `02`, `03`, ... for `images` ([chain #42](https://github.com/umina-achala/umina-achala-chain/issues/42)). Each is turned upright from its EXIF orientation, fitted inside 1600 px on its long side (never enlarged) and written **without any metadata**, so no EXIF or GPS location of a mine reaches IPFS:
 
-| File | Made for | Format |
+| Photo | File | Format |
 |---|---|---|
-| `01-master.<ext>`, `02-master.<ext>`, ... | every photo (01 is `main_image`) | Full size, the upload's format: JPEG and WebP at quality 95, PNG lossless. |
-| `01-display.jpg` | `main_image` only | 1080 px on the long side (never enlarged), JPEG quality 82. |
+| With transparency (a cut-out) | `<nn>.png` | PNG with a reduced palette, quality 90: slightly lossy, the transparency kept, so a wallet shows it on its own theme. About a quarter of a lossless PNG (gold A: 827 KB instead of 4 MB). |
+| Without transparency | `<nn>.jpg` | JPEG, quality 82. For a piece photographed on a background. |
 
-The SHA-256 of each master is computed. Running again overwrites the files.
+The sizes and qualities are in `config/umina-achala.js` (`images`). The SHA-256 of each file is computed. Running again overwrites the files.
 
 #### The pinned metadata
 
 What is pinned is the metadata with:
 
 - `main_image`, `images` and `documents` removed.
-- `image` = `ipfs://<CID of 01-display.jpg>`, and `type` = `image/jpeg`. Wallets and marketplaces show `image`.
+- `image` = `ipfs://<CID of 01.png>` (or `01.jpg`), and `type` its MIME type. Wallets and marketplaces show `image`.
 - Each `properties.certifications[].document` = the `ipfs://` URI of that report, which must be one of the `documents` ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)).
-- `files[]`: one entry per master (`uri`, `type`, `checksum` (its SHA-256), `metadata.description`; the main one has `is_default_file: true`), then one per document. The web site and the app fetch the masters and resize them, so no thumbnails are made.
+- `files[]`: one entry per photo in `images` (`uri`, `type`, `checksum` (its SHA-256), `metadata.description`), then one per document. The main photo is only in `image`, so a wallet that shows `image` and the images in `files[]` (HashPack does) shows each photo once; no entry has `is_default_file` ([chain #42](https://github.com/umina-achala/umina-achala-chain/issues/42)). The web site and the app resize what they need, so no thumbnails are made.
 - `properties.compliance_proof_hcs` = the `COMPLIANCE` transaction ID, and `properties.hcs_compliance_topic` = `HCS_TOPIC_ID`.
 - `name`, built from the type and the `stone_id` ([chain #38](https://github.com/umina-achala/umina-achala-chain/issues/38)); an Achala's stones are named by type from their `COMPLIANCE` events.
 - The attributes wallets show, written from the data, replacing any hand-written ones with the same `trait_type`:
@@ -620,7 +619,7 @@ Each file is pinned to Pinata (`pinFileToIPFS`) under the name `<stone_id>-<file
    - the schema (`schema/hip412-umina-schema.json` or `schema/hip412-achala-schema.json`), with placeholder `ipfs://pending` URIs since nothing has a CID yet;
    - what a schema cannot check: stone types against the list (not deprecated, not a fossil, exactly one `host` in `materials`), and the check digits of `vendor_ruc` and `reinfo_id`.
 5. **`--dry-run` stops here.** It lists the image files it would make and the documents it would pin. Nothing is written except the generated metadata file, and nothing is sent.
-6. **Make the image versions** into `generated/<stone_id>/`.
+6. **Make the image files** into `generated/<stone_id>/`, one per photo.
 7. **`--images-only` stops here.** It lists what it would pin, prints the metadata it would pin (CIDs pending), and names the token and topic it would use. It needs no credentials and touches no network.
 8. **Read the provenance topic** from the mirror node. It stops if the topic does not exist or is deleted. It stops if the `stone_id` already has a `MINT` event, naming that event's sequence number and serials; `--force` mints it again anyway.
 9. **An Achala: check its stones.** For each of `properties.stones` (`stone_id` and `serial`), it reads the NFT from the mirror node and checks that:
@@ -632,7 +631,7 @@ Each file is pinned to Pinata (`pinFileToIPFS`) under the name `<stone_id>-<file
    `--force` does **not** skip these checks.
 10. **Connect** as the operator.
 11. **Record `COMPLIANCE`** in the provenance topic and wait for its receipt.
-12. **Pin** each master, the display version and each document, then the metadata JSON.
+12. **Pin** each photo's file and each document, then the metadata JSON.
 13. **Mint.** A `TokenMintTransaction` on the class's token, with one metadata entry, the bytes of `ipfs://<metadata CID>`, signed with `SUPPLY_KEY`. The operator pays. The receipt gives the new serial: serials count up from 1 in each token, and the token's treasury holds the new NFT.
 14. **Record `MINT`** with the serial, `ref` = the mint transaction ID, and `ipfs_cid` = the metadata CID. An Achala's `MINT` adds `from_stone_ids`, which records its stones as mounted.
 15. **Print a table:** `stone_id`, `event`, `actor_id`, `ipfs_cid`, `hcs_tx_id` and the time.
