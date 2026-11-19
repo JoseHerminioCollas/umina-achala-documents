@@ -255,6 +255,15 @@ What each script records in the provenance topic, as of 2026-11-06. Every event 
 
 Mounting and unmounting are recorded only in the Achala's own events (`MINT` and `BURN`); the stones get no events of their own (decided 2026-11-06).
 
+**Display topic** (`HCS_DISPLAY_TOPIC_ID`): what UA has for sale on its site ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43), 2026-11-19). Same envelope and submit key; no `ref`.
+
+| Event | Recorded by | When | Event fields |
+|---|---|---|---|
+| `LISTED` | `display/displayEvent.js listed` | UA puts an item it holds in the Treasury up for sale, or changes its price | `price` (text, HBAR), `currency` (`HBAR`) |
+| `UNLISTED` | `display/displayEvent.js unlisted` | UA takes the item off the site without a sale | `reason`, optional |
+
+An item is listed when its latest `LISTED` / `UNLISTED` made since the NFT last arrived in the Treasury is a `LISTED`; an item sold and returned is listed again by hand. A stone mounted in an Achala is not listed alone. See [scripts.md, Listing](scripts.md#listing).
+
 **Still to settle before mainnet**, since HCS messages cannot be changed once written (on testnet, a change after the run, [chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22), only means creating a fresh topic):
 
 - `stone_id` in every event: today only `COMPLIANCE` and `MINT` always carry it; `SALE`, `ISSUED_TO_OWNER`, `TRANSFER` and `BURN` name the item by `token_id` and serial only ([chain #25](https://github.com/umina-achala/umina-achala-chain/issues/25)).
@@ -262,12 +271,12 @@ Mounting and unmounting are recorded only in the Achala's own events (`MINT` and
 
 The last Phase 2A code is written, on `main` in the chain repo (2026-11-06; upstream since 2026-11-09): an Achala's sale moves it and its stones in one transfer and records one `SALE` with `from_stone_ids`, `umina_token_id` and `umina_serials` (`sellOwnItem.js --token achala`; `recordEvent.js --token achala` for `SALE` and `DELIVERED` made elsewhere, [chain #26](https://github.com/umina-achala/umina-achala-chain/issues/26)); and a stone mounted in an Achala that still exists is refused by the sale, consignment, burn and wipe scripts, which read the topic first ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)).
 
-Planned, not recorded by any script yet: `TRANSFORMATION` (cutting or polishing), `EXPORT`, the display-topic events (`LISTED`, `UNLISTED`, `DISPLAYED`, `HIDDEN`) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
+Planned, not recorded by any script yet: `TRANSFORMATION` (cutting or polishing), `EXPORT`, the display-topic events `DISPLAYED` and `HIDDEN` (in Phase 2B, listed means shown) and the rest of the catalog in [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10).
 
 ## Status
 
 - The topic script is written and tested, on `main` ([chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9)); renamed from `createUminaTopic.js` to `createTopic.js`, since the topics serve both token classes.
-- Testnet topics created by the project owner on 2026-11-10 ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)): provenance [`0.0.11400670`](https://hashscan.io/testnet/topic/0.0.11400670) and display [`0.0.11400772`](https://hashscan.io/testnet/topic/0.0.11400772), about 0.46 HBAR each. Both have the same separate submit and admin keys (ECDSA, generated with OpenSSL, not the operator key). The display topic stays empty until a script or the site posts to it.
+- Testnet topics created by the project owner on 2026-11-10 ([chain #22](https://github.com/umina-achala/umina-achala-chain/issues/22)): provenance [`0.0.11400670`](https://hashscan.io/testnet/topic/0.0.11400670) and display [`0.0.11400772`](https://hashscan.io/testnet/topic/0.0.11400772), about 0.46 HBAR each. Both have the same separate submit and admin keys (ECDSA, generated with OpenSSL, not the operator key). The display topic receives `LISTED` and `UNLISTED` from `displayEvent.js` ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43), on branch `site-chain-data`, not yet run on testnet).
 - Mainnet keys are not decided.
 
 ## Code and Issue Reference
@@ -278,7 +287,8 @@ Code is in `umina-achala-chain`.
 |---|---|---|
 | Create a topic | `src/topic/createTopic.js` | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
 | Topic env checks, transaction, existing-topic check | `src/topic/lib.js` (`validateTopicEnv`, `buildTopicTransaction`, `existingTopicProblem`) | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9) |
-| Mirror node lookups | `src/mirror.js` (`topicInfo`, `topicEvents`) | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20) |
+| Mirror node lookups | `src/mirror.js` (`topicInfo`, `topicEvents`; `accountNfts`, `latestArrival` for listing) | [chain #9](https://github.com/umina-achala/umina-achala-chain/issues/9), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20), [#43](https://github.com/umina-achala/umina-achala-chain/issues/43) |
+| Display events: `LISTED`, `UNLISTED`, listing status | `src/display/displayEvent.js`, `src/display/lib.js` (`currentListing`, `listingProblem`) | [chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43) |
 | Event envelope, submit-key signing, receipt | `src/hcs.js` (`buildEvent`, `submitEvent`, `submitKeyProblem`) | [chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17) |
 | Event shapes and the two topics | | [chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10) |
 | Env variables | `.env.example` (`HCS_TOPIC_ID`, `HCS_DISPLAY_TOPIC_ID`, `HCS_SUBMIT_KEY`, `HCS_ADMIN_KEY`) | |

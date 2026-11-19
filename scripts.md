@@ -12,7 +12,8 @@ How to run the scripts in `umina-achala-chain`, what each command-line option do
 - [Tokens](#tokens): `createToken.js`, `adminToken.js`
 - [Topics](#topics): `createTopic.js`
 - [Minting](#minting): `mintNFT.js`
-- [HCS Events](#hcs-events): the envelope, each event, signing, reading the topic
+- [HCS Events](#hcs-events): the envelope, each event, the display topic, signing, reading the topic
+- [Listing](#listing): `displayEvent.js`
 - [Sales](#sales): `sellOwnItem.js`, `recordEvent.js`
 - [Consignment](#consignment): `associateToken.js`, `consignToMerchant.js`, `sellConsigned.js`, `endConsignment.js`
 - [Hedera Documentation](#hedera-documentation)
@@ -686,6 +687,18 @@ How the scripts read them:
 - **Mounted:** a stone is mounted while an Achala `MINT` lists it in `from_stone_ids` and no `BURN` names that Achala serial. The stones get no events of their own. `from_stone_ids` in `COMPLIANCE` does not mount anything; only the `MINT` does.
 - **Stone type of a stone in an Achala:** its latest `COMPLIANCE`.
 
+### The display topic
+
+What UA has for sale on its site is on a second topic, the display topic (`HCS_DISPLAY_TOPIC_ID`), with the same envelope and the same submit key ([chain #10](https://github.com/umina-achala/umina-achala-chain/issues/10), [chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43)). See [Listing](#listing).
+
+| Event | Recorded by | Its own fields |
+|---|---|---|
+| `LISTED` | `displayEvent.js listed` | `price` (text, HBAR, written the short way: `50.5`) and `currency` (`HBAR`). A new `LISTED` changes the price. |
+| `UNLISTED` | `displayEvent.js unlisted` | `reason`, when given. |
+
+- **Listed:** the item's latest `LISTED` or `UNLISTED`, among those made **after the NFT last arrived in the Treasury**, is a `LISTED`. The arrival is the latest transaction on the mirror node that moved the NFT into the Treasury (its mint, or its return). So an item sold and returned is not listed by its old `LISTED`: it is listed again by hand.
+- `DISPLAYED` and `HIDDEN` are planned, not built: in Phase 2B, listed means shown.
+
 ### Signing
 
 The topic only accepts messages signed with its submit key. Each message is a `TopicMessageSubmitTransaction`, paid for and signed by the operator. When `HCS_SUBMIT_KEY` is set, it also signs.
@@ -703,6 +716,47 @@ Each submission waits for its receipt, so a message rejected at consensus (a wro
 - HashScan shows them decoded: `https://hashscan.io/testnet/topic/<topic-id>`.
 
 The mirror node can be a few seconds behind consensus. A script run straight after another may not see the event just recorded yet; wait a few seconds and run it again.
+
+## Listing
+
+### `displayEvent.js`
+
+Records what UA has for sale on its site, and at what price, on the display topic ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43)). The site's catalog ([chain #44](https://github.com/umina-achala/umina-achala-chain/issues/44)) lists an item only while it is listed. It never moves an NFT or HBAR. Phase 2B: only items the Treasury holds, no consignment.
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <hbar> [--token umina|achala] [--dry-run]
+NETWORK=testnet node src/display/displayEvent.js unlisted <serial> [--reason <text>] [--token umina|achala] [--dry-run]
+NETWORK=testnet node src/display/displayEvent.js status [--token umina|achala]
+```
+
+| Option | Meaning |
+|---|---|
+| `listed <serial>` | List the item, or change its price. One item per run. |
+| `--price <hbar>` | The asking price in HBAR, positive, at most 8 decimals. Required with `listed`. |
+| `unlisted <serial>` | Take the item off the site without a sale. |
+| `--reason <text>` | Why, at most 200 characters. Public and permanent: no personal data. |
+| `status` | Every item the Treasury holds, whether it is listed and at what price, and a stone mounted in an Achala. Sends nothing, and needs no operator key. |
+| `--token umina\|achala` | The token class; default `umina` (`status`: both). |
+
+Checks before anything is sent, also on `--dry-run`:
+
+- The item has a `MINT` on the provenance topic; the event's `stone_id` comes from it.
+- `listed` refuses an Umiña mounted in an Achala that still exists: it is sold with its Achala, which is listed as one item at one price. A stone listed before it was mounted can still be unlisted.
+- The Treasury holds the NFT now and it is not burned (mirror node).
+- `listed` at the same price as now is refused (nothing would change); `unlisted` of an item that is not listed is refused.
+
+Example: list agate A (Umiña serial 15) and the gold Achala G (Achala serial 5), change a price, take one off, and check:
+```bash
+NETWORK=testnet node src/display/displayEvent.js status
+NETWORK=testnet node src/display/displayEvent.js listed 15 --price 50 --dry-run
+NETWORK=testnet node src/display/displayEvent.js listed 15 --price 50
+NETWORK=testnet node src/display/displayEvent.js listed 5 --price 120 --token achala
+NETWORK=testnet node src/display/displayEvent.js listed 15 --price 45          # new price
+NETWORK=testnet node src/display/displayEvent.js unlisted 15 --reason "Photo retake"
+NETWORK=testnet node src/display/displayEvent.js status
+```
+
+Needs `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID`, `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID`, `HCS_TOPIC_ID`, `HCS_DISPLAY_TOPIC_ID` and, when the topic's submit key is not the operator key, `HCS_SUBMIT_KEY`. Each event costs about USD 0.001, paid by the operator.
 
 ## Sales
 
