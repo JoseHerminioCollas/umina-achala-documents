@@ -207,7 +207,7 @@ This does **not** work for consigned NFTs. They are in the merchant's account, a
 
 ### Current State
 
-The marketplace still reads 30 demo stones from `frontend/src/data/uminas.json`, bundled into the build, with no `tokenId` or serial and no check against the chain. They are removed in [web #125](https://github.com/umina-achala/umina-achala-web/issues/125).
+The marketplace reads `catalog.json` at run time, built from the chain by the catalog builder: each Umiña and Achala UA has for sale, with its token ID, serial, metadata and price. It is only as current as its last build; between builds, the site checks the mirror node (below).
 
 ### The Catalog: Built From the Chain
 
@@ -219,6 +219,97 @@ A script run by hand ([chain #44](https://github.com/umina-achala/umina-achala-c
 - its latest display event is `LISTED`, which carries the price ([chain #43](https://github.com/umina-achala/umina-achala-chain/issues/43)).
 
 Anything else is left out: sold, transferred, burned, unlisted, or a stone mounted in an Achala (listed with its Achala).
+
+### Commands: List, Rebuild, Check
+
+The order is always **list → rebuild the catalog → publish it**. The site shows the change on the next page load, with no site build. The scripts are in the chain repository; `NETWORK` picks `testnet` or `mainnet`. In the examples, `<serial>` is the NFT's serial number and `<price>` is in HBAR.
+
+**1. See what the Treasury holds and what is listed.** It reads the mirror node and sends nothing:
+
+```
+NETWORK=testnet node src/display/displayEvent.js status
+```
+
+For the jewelry token:
+
+```
+NETWORK=testnet node src/display/displayEvent.js status --token achala
+```
+
+It prints one row per NFT the Treasury holds, with its state: `not listed`, `listed, 45 HBAR`, or `in Achala <stone_id>` for a stone mounted in a piece of jewelry.
+
+**2. List, reprice or unlist.** Each is one HCS message to the display topic, signed with the topic's submit key; no NFT or HBAR moves. Run with `--dry-run` first: it makes every check and prints the message without sending it.
+
+List an item, first as a dry run:
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <price> --dry-run
+```
+
+Then for real:
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <price>
+```
+
+List a piece of jewelry; its mounted stones go with it, at one price:
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <price> --token achala
+```
+
+Change a price: list it again with the new price (a new `LISTED`):
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <new-price>
+```
+
+Take an item down; the reason is public:
+
+```
+NETWORK=testnet node src/display/displayEvent.js unlisted <serial> --reason "<reason>"
+```
+
+Several at once, as `serial:price` pairs (one command over several lines):
+
+```
+for pair in 9:35 10:40 11:90; do
+  NETWORK=testnet node src/display/displayEvent.js listed "${pair%%:*}" --price "${pair##*:}"
+done
+```
+
+The script refuses: an NFT the Treasury does not hold, a burned one, a stone mounted in a piece of jewelry that still exists, the same price as the current listing, and unlisting an item that is not listed.
+
+**3. Rebuild the catalog.** It reads the mirror node and IPFS and needs no key; if anything fails, the old file stays. `<out-dir>` is the folder the site serves `data/catalog.json` from (in development, the site's `public/data/`):
+
+```
+NETWORK=testnet node src/catalog/buildCatalog.js <out-dir>
+```
+
+Print what would be written, without writing it:
+
+```
+NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> --dry-run
+```
+
+**4. Publish it.** Copy `catalog.json` to the live site's `data/` folder. A visitor sees it on the next page load: the site fetches it without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`.
+
+**5. Check on the chain.** Open the display topic on HashScan (`https://hashscan.io/testnet/topic/<display-topic-id>/messages`), or read it from the mirror node with the messages decoded:
+
+```
+curl -s "https://testnet.mirrornode.hedera.com/api/v1/topics/<display-topic-id>/messages?limit=50" | jq -r '.messages[] | "\(.sequence_number) " + (.message | @base64d)'
+```
+
+Example output for one stone that was listed, repriced, taken down and listed again:
+
+```
+1 {"event":"LISTED","stone_id":"UMINA-2026-AG-01","serials":["15"],"price":"50","currency":"HBAR",…}
+2 {"event":"LISTED","stone_id":"UMINA-2026-AG-01","serials":["15"],"price":"45",…}
+3 {"event":"UNLISTED","stone_id":"UMINA-2026-AG-01","serials":["15"],"reason":"Photo retake",…}
+4 {"event":"LISTED","stone_id":"UMINA-2026-AG-01","serials":["15"],"price":"45",…}
+```
+
+An item's state is its latest event: this stone is listed at 45 HBAR.
 
 ### How the Site Learns of a Sale Made Elsewhere
 
@@ -292,6 +383,6 @@ Chain code is in `umina-achala-chain`. "On `main`" means on the `main` branch of
 | Seller model (consignment or not) | | Open | [web #90](https://github.com/umina-achala/umina-achala-web/issues/90) |
 | Wallet connection and payment | none | Not built | [web #58](https://github.com/umina-achala/umina-achala-web/issues/58) |
 | Backend that signs UA's side of a sale | none | Not built | [web #116](https://github.com/umina-achala/umina-achala-web/issues/116) |
-| `tokenId` / `serialNumber` in the site data | `frontend/src/types/umina.ts`, `frontend/src/data/uminas.json` | Not built | [web #89](https://github.com/umina-achala/umina-achala-web/issues/89) |
+| Token ID and serial in the site data | `frontend/src/types/catalog.ts`, `catalog.json` | Built (branch `site-chain-data`) | [web #89](https://github.com/umina-achala/umina-achala-web/issues/89) |
 | HashScan link hardcodes mainnet | `frontend/src/components/StoneModal.tsx` | Not fixed | [web #75](https://github.com/umina-achala/umina-achala-web/issues/75) |
-| Sold stones on the marketplace (mirror node ownership check) | `frontend/src/data/UminaFacade.ts`, `components/Marketplace.tsx` | Not built | [web #115](https://github.com/umina-achala/umina-achala-web/issues/115) |
+| Sold stones on the marketplace (mirror node ownership check) | `frontend/src/data/CatalogFacade.ts`, `components/Marketplace.tsx` | Not built | [web #115](https://github.com/umina-achala/umina-achala-web/issues/115) |
