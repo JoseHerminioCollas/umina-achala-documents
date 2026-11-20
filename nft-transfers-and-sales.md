@@ -110,7 +110,7 @@ The same transfer, as UA's scripts do it (see [consignment.md](consignment.md#co
 
 ### History on the Ledger
 
-When UA no longer holds the NFT, UA no longer writes its history to HCS. The ledger still records every transfer. Anyone can see the full ownership chain of a serial on a mirror node or on HashScan (`https://hashscan.io/mainnet/token/<tokenId>/nft/<serial>`).
+When UA no longer holds the NFT, UA no longer writes its history to HCS. The ledger still records every transfer. Anyone can see the full ownership chain of a serial on a mirror node or on HashScan (`https://hashscan.io/mainnet/token/<tokenId>/<serial>`).
 
 UA can keep posting stone-related events (re-certification, for example) to HCS for any serial, whoever holds it.
 
