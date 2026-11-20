@@ -21,7 +21,8 @@
   - [Website: Showing What Is for Sale](#website-showing-what-is-for-sale)
     - [Current State](#current-state)
     - [The Catalog: Built From the Chain](#the-catalog-built-from-the-chain)
-    - [How the Site Learns of a Sale Made Elsewhere](#how-the-site-learns-of-a-sale-made-elsewhere)
+    - [Commands: List, Rebuild, Check](#commands-list-rebuild-check)
+    - [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale)
     - [Failure Behavior](#failure-behavior)
   - [Open Decisions](#open-decisions)
   - [Code and Issue Reference](#code-and-issue-reference)
@@ -194,7 +195,7 @@ What this leaves out:
 |---|---|
 | **Trust and order** | Two separate transactions, not one atomic one. Payment first protects UA |
 | **HCS record** | `NETWORK=testnet node src/record/recordEvent.js sale <serial> --seller <Treasury> --buyer <id> --nft-tx <tx> --payment on_chain --payment-tx <tx> [--sold-for <hbar>]` checks both transactions on the mirror node (the NFT moved, the buyer paid, the amount matches) and posts `SALE`, refusing a duplicate ([chain #8](https://github.com/umina-achala/umina-achala-chain/issues/8)). The atomic alternative is `src/sale/sellOwnItem.js` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)) |
-| **Website listing** | The site removes the stone on the next page load, from the mirror node holder (see [Website: Showing What Is for Sale](#website-showing-what-is-for-sale), [web #115](https://github.com/umina-achala/umina-achala-web/issues/115)) |
+| **Website listing** | Post `UNLISTED` to the display topic and rebuild the catalog; the stone is gone on the next page load (see [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale)) |
 | **Other listings** | If the stone is also listed on SentX, delist it, or confirm SentX drops the listing once the NFT moves |
 | **Treasury key in a wallet** | Selling from a wallet means the Treasury key is in HashPack or similar on a device. That key also collects royalties and holds unsold stock. A hardware wallet is safer |
 | **Royalty** | None, but Treasury sales are expected to be exempt anyway |
@@ -207,7 +208,7 @@ This does **not** work for consigned NFTs. They are in the merchant's account, a
 
 ### Current State
 
-The marketplace reads `catalog.json` at run time, built from the chain by the catalog builder: each Umiña and Achala UA has for sale, with its token ID, serial, metadata and price. It is only as current as its last build; between builds, the site checks the mirror node (below).
+The marketplace reads `catalog.json` at run time, built from the chain by the catalog builder: each Umiña and Achala UA has for sale, with its token ID, serial, metadata and price. It is only as current as its last build; see [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale).
 
 ### The Catalog: Built From the Chain
 
@@ -280,7 +281,7 @@ done
 
 The script refuses: an NFT the Treasury does not hold, a burned one, a stone mounted in a piece of jewelry that still exists, the same price as the current listing, and unlisting an item that is not listed.
 
-**3. Rebuild the catalog.** It reads the mirror node and IPFS and needs no key; if anything fails, the old file stays. `<out-dir>` is the folder the site serves `data/catalog.json` from (in development, the site's `public/data/`):
+**3. Rebuild the catalog.** It reads the mirror node and IPFS and needs no key; if anything fails, the old file stays. `<out-dir>` is the folder the site serves `data/catalog.json` from (in development, the site's `public/data/`). It also saves two smaller copies of each photo under `<out-dir>/media/<cid>/`, a thumbnail for the cards and a display copy for the detail view, so visitors never load full-size photos from a public IPFS gateway. A copy already on disk is never downloaded again, since an IPFS file never changes; the first build of a full catalog can take minutes:
 
 ```
 NETWORK=testnet node src/catalog/buildCatalog.js <out-dir>
@@ -292,7 +293,7 @@ Print what would be written, without writing it:
 NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> --dry-run
 ```
 
-**4. Publish it.** Copy `catalog.json` to the live site's `data/` folder. A visitor sees it on the next page load: the site fetches it without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`.
+**4. Publish it.** Copy `catalog.json` and `media/` to the live site's `data/` folder. A visitor sees it on the next page load: the site fetches the catalog without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`. The photo copies never change, so the server can cache `data/media/` for a year.
 
 **5. Check on the chain.** Open the display topic on HashScan (`https://hashscan.io/testnet/topic/<display-topic-id>/messages`), or read it from the mirror node with the messages decoded:
 
@@ -311,9 +312,21 @@ Example output for one stone that was listed, repriced, taken down and listed ag
 
 An item's state is its latest event: this stone is listed at 45 HBAR.
 
-### How the Site Learns of a Sale Made Elsewhere
+### Keeping the Catalog Current After a Sale
 
-The catalog is only as current as its last build. In between, the site checks the mirror node on each page load ([web #115](https://github.com/umina-achala/umina-achala-web/issues/115)):
+The catalog is only as current as its last build. How the site catches up depends on whether every change goes through the display topic.
+
+**When every change goes through the display topic** (one seller, the Treasury, holds everything; items are listed and unlisted by script; sales happen only on the site): rebuild the catalog after each sale.
+
+1. The buyer signs and the sale transaction succeeds.
+2. The sale backend posts `UNLISTED` (reason `sold`) to the display topic, and `SALE` to the provenance topic.
+3. It waits until the mirror node shows the `UNLISTED` (a few seconds after consensus); a rebuild started earlier would still list the item.
+4. It runs the catalog builder, which writes a new `catalog.json` where the site serves it. Only one rebuild runs at a time, including one started by hand.
+5. The buyer's browser hides the item at once; everyone else sees it gone on the next page load.
+
+The browser reads only `catalog.json`: no mirror node calls when a page opens, so each visit costs one small file. The catalog stays the builder's output from the chain; nothing edits it. The backend must run where it can write the site's `data/` folder. Listings added or removed by script still need a rebuild by hand (or a scheduled one).
+
+**When sellers can sell outside the site** (consignment: a merchant holds the NFT and UA has an allowance), the chain can change without a display event. Then the site checks the mirror node on each page load:
 
 | What happened | What the mirror node shows | Site |
 |---|---|---|
@@ -323,15 +336,13 @@ The catalog is only as current as its last build. In between, the site checks th
 | Burned or wiped | `deleted` | Hidden |
 | Merchant sold the physical piece and has not moved the NFT | Nothing changes | Still listed: the chain cannot know. The consignment agreement requires the merchant to tell UA, and UA posts `UNLISTED` |
 
-Requests: `GET /api/v1/tokens/<tokenId>/nfts?limit=100` for each token (follow `links.next`), and `GET /api/v1/accounts/<merchant>/allowances/nfts?token.id=<tokenId>` for each merchant with listed items. The public mirror node needs no API key; confirm that it allows browser requests on the first test. Changes show within seconds of consensus.
+Requests: `GET /api/v1/tokens/<tokenId>/nfts?limit=100` for each token (follow `links.next`), and `GET /api/v1/accounts/<merchant>/allowances/nfts?token.id=<tokenId>` for each merchant with listed items. The public mirror node needs no API key; confirm that it allows browser requests on the first test. Changes show within seconds of consensus. If the mirror node is slow or down, the site shows the catalog as built and does not block the page.
 
 ### Failure Behavior
 
-If the mirror node is slow or down, the site shows the catalog as built and does not block the page. The sale backend ([web #116](https://github.com/umina-achala/umina-achala-web/issues/116)) checks the holder and allowance again before building a sale, so a stale listing cannot be sold.
+The sale backend checks the holder (and, for a consigned item, the allowance) again before building a sale, so a stale listing cannot be sold. If the rebuild after a sale fails, the old catalog stays, and the next rebuild (after the next sale, or by hand) catches up.
 
-**What this does not do:** record a sale (that is the HCS `SALE` event), or keep the seller list up to date when merchants join or leave consignment.
-
-**Status:** not built.
+**What this does not do:** keep the seller list up to date when merchants join or leave consignment.
 
 ## Open Decisions
 
