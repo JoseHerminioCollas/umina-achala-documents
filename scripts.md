@@ -788,8 +788,8 @@ NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> [--dry-run]
 
 | Option | Meaning |
 |---|---|
-| `<out-dir>` | The folder for `catalog.json`, e.g. `../umina-achala-web/frontend/public/data` for the site in development. |
-| `--dry-run` | Print what would be in the catalog, and write nothing. |
+| `<out-dir>` | The folder for `catalog.json` and `media/`, e.g. `../umina-achala-web/frontend/public/data` for the site in development. |
+| `--dry-run` | Print what would be in the catalog and how many files it would read, and write nothing. |
 
 **What is in it: only what UA has for sale** (Phase 2B: the Treasury). No sold items and no "Sold" badge. An NFT is in the catalog when:
 
@@ -802,6 +802,16 @@ NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> [--dry-run]
 An Achala is in only when the Treasury still holds each of its stones. The run prints what is in, and what is left out with the reason.
 
 **Metadata** is read through the IPFS gateway, Pinata's public one by default (`IPFS_GATEWAY` in the env file changes it), tried 3 times. A CID already in the previous `catalog.json` in `<out-dir>` is not read again: an IPFS file never changes. Each file is checked against its schema; an item whose metadata is not valid is left out, with a warning.
+
+**Copies of the files** go under `<out-dir>/media/<cid>/`, so the site never loads a file from the IPFS gateway on a visit:
+
+| File in the metadata | Copies |
+|---|---|
+| A photo (`image`, and each `image/*` file) | `thumb.webp` (fitted inside 400 px) for the cards, `display.webp` (1080 px) for the detail view; transparency kept |
+| A 3D model (`model/gltf-binary`) | `model.glb`, unchanged |
+| A PDF document (`application/pdf`) | `document.pdf`, unchanged |
+
+Each file is read through the gateway once: a copy already on disk is not read again. A file that cannot be read gets no copy, with a warning; the build goes on and the site loads that one file through the gateway. The run ends with the total size of `media/`; the 3D models are the largest files (a few MB each).
 
 **Failures:** if the mirror node or the gateway fails, the build stops and the old catalog stays. The file is written to `catalog.json.tmp`, then renamed.
 
@@ -817,6 +827,7 @@ An Achala is in only when the Treasury still holds each of its stones. The run p
 | `items[].price` | `amount`, `currency` (HBAR), `listed_seq` and `listed_at` of its `LISTED` |
 | `items[].events[]` | Its provenance events (`seq`, `consensus_timestamp`, `event`): the `COMPLIANCE` before its `MINT`, its own events, and for a stone the Achala pieces it was mounted in |
 | `items[].stones[]` | An Achala only: each mounted stone with its metadata and events |
+| `media` | Each copied file's `ipfs://` URI to its copies, relative to `catalog.json`: `{ thumb, display }` for a photo, `{ file }` for a model or document |
 
 Two builds with no change on the chain differ only in `built_at`.
 

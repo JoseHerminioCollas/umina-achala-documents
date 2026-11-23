@@ -281,7 +281,7 @@ done
 
 The script refuses: an NFT the Treasury does not hold, a burned one, a stone mounted in a piece of jewelry that still exists, the same price as the current listing, and unlisting an item that is not listed.
 
-**3. Rebuild the catalog.** It reads the mirror node and IPFS and needs no key; if anything fails, the old file stays. `<out-dir>` is the folder the site serves `data/catalog.json` from (in development, the site's `public/data/`). It also saves two smaller copies of each photo under `<out-dir>/media/<cid>/`, a thumbnail for the cards and a display copy for the detail view, so visitors never load full-size photos from a public IPFS gateway. A copy already on disk is never downloaded again, since an IPFS file never changes; the first build of a full catalog can take minutes:
+**3. Rebuild the catalog.** It reads the mirror node and IPFS and needs no key; if anything fails, the old file stays. `<out-dir>` is the folder the site serves `data/catalog.json` from (in development, the site's `public/data/`). It also saves two smaller copies of each photo under `<out-dir>/media/<cid>/`, a thumbnail for the cards and a display copy for the detail view, and a copy of each 3D model and PDF document, so visitors never load a file from a public IPFS gateway. A copy already on disk is never downloaded again, since an IPFS file never changes; the first build of a full catalog can take minutes:
 
 ```
 NETWORK=testnet node src/catalog/buildCatalog.js <out-dir>
@@ -293,7 +293,7 @@ Print what would be written, without writing it:
 NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> --dry-run
 ```
 
-**4. Publish it.** Copy `catalog.json` and `media/` to the live site's `data/` folder. A visitor sees it on the next page load: the site fetches the catalog without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`. The photo copies never change, so the server can cache `data/media/` for a year.
+**4. Publish it.** Copy `catalog.json` and `media/` to the live site's `data/` folder. A visitor sees it on the next page load: the site fetches the catalog without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`. The copies never change, so the server can cache `data/media/` for a year. Serve `.glb` files as `model/gltf-binary`: Nginx's default `mime.types` has no entry for them.
 
 **5. Check on the chain.** Open the display topic on HashScan (`https://hashscan.io/testnet/topic/<display-topic-id>/messages`), or read it from the mirror node with the messages decoded:
 
