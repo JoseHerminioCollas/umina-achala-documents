@@ -15,7 +15,7 @@ How to run the scripts in `umina-achala-chain`, what each command-line option do
 - [HCS Events](#hcs-events): the envelope, each event, the display topic, signing, reading the topic
 - [Listing](#listing): `displayEvent.js`
 - [Catalog](#catalog): `buildCatalog.js`, the site's `catalog.json`
-- [Sales](#sales): `sellOwnItem.js`, `recordEvent.js`
+- [Sales](#sales): `sellOwnItem.js`, the sale backend, `recordEvent.js`
 - [Consignment](#consignment): `associateToken.js`, `consignToMerchant.js`, `sellConsigned.js`, `endConsignment.js`
 - [Hedera Documentation](#hedera-documentation)
 
@@ -712,7 +712,7 @@ What UA has for sale on its site is on a second topic, the display topic (`HCS_D
 | Event | Recorded by | Its own fields |
 |---|---|---|
 | `LISTED` | `displayEvent.js listed` | `price` (text, HBAR, written the short way: `50.5`) and `currency` (`HBAR`). A new `LISTED` changes the price. |
-| `UNLISTED` | `displayEvent.js unlisted` | `reason`, when given. |
+| `UNLISTED` | `displayEvent.js unlisted`; after a sale, `sellOwnItem.js` and the sale backend (reason `sold`) | `reason`, when given. |
 
 - **Listed:** the item's latest `LISTED` or `UNLISTED`, among those made **after the NFT last arrived in the Treasury**, is a `LISTED`. The arrival is the latest transaction on the mirror node that moved the NFT into the Treasury (its mint, or its return). So an item sold and returned is not listed by its old `LISTED`: it is listed again by hand.
 - `DISPLAYED` and `HIDDEN` are planned, not built: in Phase 2B, listed means shown.
@@ -843,7 +843,7 @@ Needs `TREASURY_ID`, `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID`, `HCS_TOPIC_ID` and `HC
 
 ### `sellOwnItem.js`
 
-Sells an item UA holds itself, straight from the Treasury, in one transfer: the buyer pays UA and the NFT goes to the buyer (an Achala with its stones). Records `SALE`.
+Sells an item UA holds itself, straight from the Treasury, in one transfer: the buyer pays UA and the NFT goes to the buyer (an Achala with its stones). Records `SALE` on the provenance topic, then posts `UNLISTED` (reason `sold`) on the display topic, so the item leaves the site's catalog. A sale on the website ends the same way: the sale backend uses the same code (see [The sale backend](#the-sale-backend)). If either message fails after the sale has settled, the script says how to record it by hand.
 
 ```
 NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price-hbar> [--token umina|achala] [--dry-run]
@@ -857,9 +857,21 @@ NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price-hbar> [--token umin
 
 The provenance topic and the holders (mirror node) are read first, also on `--dry-run`: a serial the Treasury no longer holds, or one that does not exist, is refused before anything is sent.
 
-Needs: `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID`, the token ID, `HCS_TOPIC_ID`, `BUYER_ID`, `BUYER_KEY`.
+Needs: `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID`, the token ID, `HCS_TOPIC_ID`, `HCS_DISPLAY_TOPIC_ID`, `BUYER_ID`, `BUYER_KEY`.
 
 Hedera: [Transfer tokens](https://docs.hedera.com/native/tokens/transfer), [Get NFT info](https://docs.hedera.com/native/tokens/get-nft-info).
+
+### The sale backend
+
+A sale on the website goes through a small Node service, `umina-achala-server` (a separate repository; its README has the endpoints, the configuration and how to run it). It installs this repository as a dependency and uses the same sale code as `sellOwnItem.js`:
+
+1. `POST /api/sale/prepare`: checks the item is listed (the price comes from the display topic), held by the Treasury, not being bought, and that the buyer's account can receive it. Builds the one transfer with UA as payer and a 2-minute validity window, and signs it as UA (and the Treasury).
+2. The buyer signs in their wallet.
+3. `POST /api/sale/submit`: takes only the buyer's signature, adds it to the transaction it built, checks it, and submits. Then it records `SALE`, posts `UNLISTED` (reason `sold`), and rebuilds the catalog.
+
+It also watches the display topic and rebuilds the catalog whenever a new `LISTED` or `UNLISTED` appears, so a sale from the command line or a listing changed by hand reaches the site within about a minute.
+
+The modules it uses are listed in this repository's `package.json` (`exports`), and `umina-achala-chain/sdk` gives it the same copy of the Hedera SDK.
 
 ### `recordEvent.js`
 

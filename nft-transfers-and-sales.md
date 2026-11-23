@@ -319,12 +319,14 @@ The catalog is only as current as its last build. How the site catches up depend
 **When every change goes through the display topic** (one seller, the Treasury, holds everything; items are listed and unlisted by script; sales happen only on the site): rebuild the catalog after each sale.
 
 1. The buyer signs and the sale transaction succeeds.
-2. The sale backend posts `UNLISTED` (reason `sold`) to the display topic, and `SALE` to the provenance topic.
+2. The sale backend records `SALE` on the provenance topic and posts `UNLISTED` (reason `sold`) to the display topic. A sale from the command line (`sellOwnItem.js`) does the same.
 3. It waits until the mirror node shows the `UNLISTED` (a few seconds after consensus); a rebuild started earlier would still list the item.
 4. It runs the catalog builder, which writes a new `catalog.json` where the site serves it. Only one rebuild runs at a time, including one started by hand.
 5. The buyer's browser hides the item at once; everyone else sees it gone on the next page load.
 
-The browser reads only `catalog.json`: no mirror node calls when a page opens, so each visit costs one small file. The catalog stays the builder's output from the chain; nothing edits it. The backend must run where it can write the site's `data/` folder. Listings added or removed by script still need a rebuild by hand (or a scheduled one).
+The browser reads only `catalog.json`: no mirror node calls when a page opens, so each visit costs one small file. The catalog stays the builder's output from the chain; nothing edits it. The backend must run where it can write the site's `data/` folder.
+
+The backend also watches the display topic, about once a minute, and rebuilds the catalog whenever a new message appears. So a sale from the command line, or a listing added or removed by script, reaches the site within about a minute, with no rebuild by hand.
 
 **When sellers can sell outside the site** (consignment: a merchant holds the NFT and UA has an allowance), the chain can change without a display event. Then the site checks the mirror node on each page load:
 
@@ -340,7 +342,7 @@ Requests: `GET /api/v1/tokens/<tokenId>/nfts?limit=100` for each token (follow `
 
 ### Failure Behavior
 
-The sale backend checks the holder (and, for a consigned item, the allowance) again before building a sale, so a stale listing cannot be sold. If the rebuild after a sale fails, the old catalog stays, and the next rebuild (after the next sale, or by hand) catches up.
+The sale backend checks the holder (and, for a consigned item, the allowance) again before building a sale, so a stale listing cannot be sold. If the rebuild after a sale fails, the old catalog stays, and the next rebuild (after the next display topic message, or by hand) catches up.
 
 **What this does not do:** keep the seller list up to date when merchants join or leave consignment.
 
