@@ -9,7 +9,7 @@ How to run the scripts in `umina-achala-chain`, what each command-line option do
 - [Common to Every Script](#common-to-every-script)
 - [Run Order on Testnet](#run-order-on-testnet)
 - [Working Examples](#working-examples): a full testnet run, command by command
-- [Tokens](#tokens): `createToken.js`, `adminToken.js`
+- [Tokens](#tokens): `createToken.js`, `adminToken.js`, `unpinBurned.js`
 - [Topics](#topics): `createTopic.js`
 - [Minting](#minting): `mintNFT.js`
 - [HCS Events](#hcs-events): the envelope, each event, the display topic, signing, reading the topic
@@ -465,6 +465,23 @@ A stone mounted in an Achala is refused by `wipe` and `burn`: burn the Achala in
 
 Hedera: [Update token custom fees](https://docs.hedera.com/native/tokens/update-fee-schedule), [Pause a token](https://docs.hedera.com/native/tokens/pause), [Unpause a token](https://docs.hedera.com/native/tokens/unpause), [Wipe a token](https://docs.hedera.com/native/tokens/wipe), [Burn a token](https://docs.hedera.com/native/tokens/burn).
 
+### `unpinBurned.js`
+
+Unpins from Pinata the IPFS files of burned NFTs that no existing NFT uses: the metadata file, the photos and the documents. A burned NFT's metadata stays on the mirror node, so its files can still be found after the burn. Run it after `adminToken.js burn` or `wipe`, and after any new mint that replaces the burned NFT, so files shared with the new mint are seen as in use.
+
+```
+NETWORK=testnet node src/pinata/unpinBurned.js [--dry-run]
+```
+
+- It reads every NFT of the Umiña and Achala tokens from the mirror node, burned ones included, and each one's metadata through the IPFS gateway.
+- **A CID any existing NFT uses is kept.** A document pinned again for a new mint has the same CID as the old one, so it stays pinned.
+- If the metadata of an existing NFT cannot be read, it stops and unpins nothing.
+- A burned NFT whose metadata cannot be read (already unpinned) has only its metadata file checked.
+- The metadata is read 4 files at a time, with a line per NFT: the public gateway takes seconds per file, so about a minute for 30 NFTs.
+- `--dry-run` lists the CIDs, with the NFTs that used them, and does not call Pinata.
+- A real run unpins each CID with one call, given up after 30 seconds. A CID the account does not pin (already unpinned, or pinned by another account) is reported and skipped. No pin list is read, so the key needs only the `unpin` scope.
+- Needs `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID` and `PINATA_JWT`. Nothing is sent to Hedera.
+
 ## Topics
 
 ### `createTopic.js`
@@ -641,7 +658,7 @@ Each file is pinned to Pinata (`pinFileToIPFS`) under the name `<stone_id>-<file
 #### Minting on testnet with the sample posts
 
 - `testnet/chrysocolla_a.json` mints `UMINA-2026-CH-99` from `chrysocolla_a1.jpg` (main image) and `chrysocolla_a1.png`–`a3.png` (three views, transparent), with `chrysocolla_a_store-receipt.pdf` and `chrysocolla_a_mining-permit.pdf`, all beside the post. `testnet/` is a symlink to the `umina-achala-testnet` repo, which holds every testnet post, image and document; it is git-ignored here, and its README has the naming convention.
-- To mint a second stone, copy the post and change its `stone_id` (e.g. `UMINA-2026-CH-98`). The same `stone_id` again is refused without `--force`, and minting it again with `--force` gives one `stone_id` two serials. An Achala sale refuses a stone minted twice, because its serial would be a guess.
+- To mint a second stone, copy the post and change its `stone_id` (e.g. `UMINA-2026-CH-98`). The same `stone_id` again is refused without `--force`, and minting it again with `--force` gives one `stone_id` two serials. To remint a stone, burn or wipe the old serial first: an Achala sale, consignment or record then uses the stone's one serial that is not burned. A stone with two serials not burned is refused, because its serial would be a guess.
 - `testnet/achala_a.json` mints `ACHALA-2026-PE-99` with `"stones": [{ "serial": 3, "stone_id": "UMINA-2026-CH-99" }]`. On a new token, change the serial to the one the Umiña mint printed (the first is 1).
 - A stone in an Achala can only be sold, consigned or burned with its Achala. To test the sale of a loose stone, mint one more stone and leave it out of every Achala.
 
