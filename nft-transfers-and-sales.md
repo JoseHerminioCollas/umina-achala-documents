@@ -99,11 +99,52 @@ A transfer with no HBAR attached pays no royalty; the receiver pays the fallback
 
 Listing an NFT for sale on SentX is different from sending it: the holder gives SentX an NFT allowance, the same mechanism UA uses for consignment.
 
+### Returning an NFT to the Treasury From a Wallet, Then Selling It Again
+
+A holder (for example a buyer returning an item) can send an Umiña NFT back to UA's Treasury with a plain **Send** in their wallet. The site does not show it again by itself: UA lists it again.
+
+**1. The holder sends the NFT to the Treasury.** In the wallet, open the NFT, choose **Send**, enter the Treasury's account ID and approve.
+
+- **Only the sender signs.** The Treasury is the token's fee collector, so no royalty and no fallback fee apply to a transfer it receives. The receiver signature that a fallback fee needs is not required.
+- **The sender pays only the network fee**, a fraction of an HBAR.
+- **No association step.** The Treasury is always associated with its own token.
+- **A piece of jewelry goes back whole:** the Achala and every Umiña mounted in it. A wallet sends one NFT at a time, so the holder sends each of them. Check that all have arrived before listing the piece: the listing checks only the Achala NFT, but a sale is refused until the Treasury holds the Achala and every stone in it.
+
+**2. Check that it arrived.** Open the transaction on HashScan, or run the status command, which reads the mirror node and sends nothing. The item shows as `not listed`:
+
+```
+NETWORK=testnet node src/display/displayEvent.js status
+```
+
+**3. List it again**, first as a dry run:
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <price> --dry-run
+```
+
+Then for real:
+
+```
+NETWORK=testnet node src/display/displayEvent.js listed <serial> --price <price>
+```
+
+For a piece of jewelry, add `--token achala`. A listing made before the item left the Treasury does not count once it comes back: an item is listed only by a `LISTED` made since the NFT last arrived in the Treasury. So it must be listed again, even at the same price.
+
+**4. The website catches up.** The sale backend reads the display topic about once a minute and rebuilds the catalog when a new `LISTED` appears, so the item is back on the site on the next page load. If the backend is not running, rebuild and publish the catalog by hand (see [Commands: List, Rebuild, Check](#commands-list-rebuild-check)).
+
+| When | What the site shows |
+|---|---|
+| While the holder has the NFT | Nothing: a sold item is not in the catalog |
+| After the transfer, before the new listing | Still nothing: the Treasury holds it, but it is not listed |
+| Within about a minute of the new `LISTED` | The item, at the new price |
+
+**What is not recorded.** The return is on the ledger (HashScan shows the transfer), but no script records it on the provenance topic. The topic's last event for the item stays the earlier `SALE`, and the history on the ledger shows that the NFT came back.
+
 ### In UA's Code
 
 The same transfer, as UA's scripts do it (see [consignment.md](consignment.md#code-samples)):
 
-- `associateToken(...)` in `src/consignment/lib.js`: the receiver associates the token.
+- `associateToken(...)` in `src/token/associate.js`: the receiver associates the token.
 - `TransferTransaction().addNftTransfer(nftId, from, to)` in `src/consignment/consignToMerchant.js` and `src/sale/sellOwnItem.js`: a plain transfer, signed by the holder.
 - `addApprovedNftTransfer(nftId, from, to)` in `src/consignment/sellConsigned.js`: the same transfer made by a spender through an allowance.
 
@@ -202,6 +243,87 @@ What this leaves out:
 
 This does **not** work for consigned NFTs. They are in the merchant's account, and UA only has an allowance, which wallets cannot spend. Either the merchant sends the NFT, or UA uses `sellConsigned.js` or Option 1. A manual consigned sale also means paying the merchant's 70% in a separate transfer, which the HCS record should link too.
 
+### UA Selling Its Own Items From the Command Line
+
+For an item UA holds in the Treasury, `sellOwnItem.js` makes the whole sale in one atomic transaction: the buyer pays the price to UA and the Treasury sends the NFT to the buyer. A piece of jewelry (an Achala) moves with every stone mounted in it. The script then records the sale on both topics, so the website catches up on its own. It ends the same way as a sale on the website, because both use the same sale code.
+
+The script is in the chain repository. On testnet, `BUYER_ID` and `BUYER_KEY` in `.env.testnet` stand in for the buyer, and the buyer's key signs in place of their wallet. UA pays the network fee.
+
+**1. The buyer associates the token** (once per buyer account; skip it if already done):
+
+On Hedera an account can receive only tokens it has associated with. The buyer's account must be associated with the token **by the time the sale transaction runs**; otherwise the sale fails with `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT` and nothing moves, payment included. There are two ways:
+
+- **Associated beforehand.** The buyer approves a token association in their wallet (on testnet, `associateToken.js buyer`, below).
+- **Associated during the sale.** An account with **automatic token association** turned on (a number of free slots, or unlimited, which many wallets set for new accounts) is associated inside the sale transaction itself, for a small extra network fee. The buyer does nothing beforehand.
+
+What to know about it:
+
+- **Once per token, not per sale.** After their first Umiña, a buyer can receive any number of them.
+- **With the token, not the seller.** Once the Umiña token is associated, the account can receive Umiña NFTs from any seller (UA's Treasury, a consigning merchant, or another collector on a resale) with no further step. Association gives no one any permission over the buyer's account, unlike an allowance.
+- **Jewelry needs both tokens**, the Achala and the Umiña, associated or covered by free slots.
+- **Checked before anything is sent.** The sale checks (on the website and in `sellOwnItem.js`) accept either way, and refuse a buyer with neither before the sale is submitted, so no fee is paid for a sale that would fail.
+
+To associate the test buyer by hand:
+
+```
+NETWORK=testnet node src/token/associateToken.js buyer
+```
+
+For a piece of jewelry, which also moves Umiña stones, associate both tokens:
+
+```
+NETWORK=testnet node src/token/associateToken.js buyer --token achala
+```
+
+**2. Check the item.** `displayEvent.js status` shows what the Treasury holds and the listed price (see [Commands: List, Rebuild, Check](#commands-list-rebuild-check)).
+
+**3. Dry run.** It makes every check and shows the sale, and sends nothing:
+
+```
+NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price> --dry-run
+```
+
+For a piece of jewelry:
+
+```
+NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price> --token achala --dry-run
+```
+
+**4. Sell.** The same command without `--dry-run`:
+
+```
+NETWORK=testnet node src/sale/sellOwnItem.js <serial> <price>
+```
+
+What the checks do, on the dry run and on the sale:
+
+| Check | Result |
+|---|---|
+| The Treasury no longer holds the NFT (or one of the Achala's stones), or the NFT does not exist or is burned | Refused, nothing sent |
+| A stone mounted in an Achala that still exists | Refused: it sells only with its Achala (`--token achala`) |
+| The buyer's account is not found, has not associated a token that moves, or holds less HBAR than the price | Refused, nothing sent |
+| The item is not listed on the site | Warning; the sale goes ahead, and no `UNLISTED` is posted for it |
+| The price given is not the listed price | Warning with both prices; the sale goes ahead at the price given |
+
+After the transaction settles, the script:
+
+1. records `SALE` on the provenance topic, with the seller (the Treasury), the buyer, the price and the sale transaction;
+2. posts `UNLISTED` (reason `sold`) on the display topic, if the item was listed.
+
+If either message fails, the sale has still happened. The script prints the `recordEvent.js` or `displayEvent.js` command that records it by hand, and exits with an error.
+
+**What happens on the website:**
+
+| When | What the site does |
+|---|---|
+| Before the sale | The item is in `catalog.json`, with the listed price |
+| Right after the sale | The item still shows until the catalog is rebuilt. A website buyer cannot buy it: the sale backend checks the listing and the holder before each sale and refuses it (not for sale, or not available) |
+| Within about a minute | The sale backend sees the new `UNLISTED` on the display topic and rebuilds the catalog. The item is gone on each visitor's next page load |
+| If the sale backend is not running | The item stays on the site until the catalog is rebuilt by hand (`buildCatalog.js`, then publish it; see [Commands: List, Rebuild, Check](#commands-list-rebuild-check)). It cannot be bought in the meantime |
+| An item that was not listed | It was never on the site, so nothing changes |
+
+The site shows no "Sold" badge: a sold item is removed from the catalog. The sale stays on the ledger and in the provenance topic, so anyone can check it on HashScan by the sale transaction ID the script prints.
+
 ## Website: Showing What Is for Sale
 
 **Decided 2026-11-19 ([web #15](https://github.com/umina-achala/umina-achala-web/issues/15)):** the site shows **only what UA has for sale**, and only testnet NFTs in Phase 2B. A sold item is removed; there are no "Sold" badges. The chain is the source of truth.
@@ -293,7 +415,23 @@ Print what would be written, without writing it:
 NETWORK=testnet node src/catalog/buildCatalog.js <out-dir> --dry-run
 ```
 
-**4. Publish it.** Copy `catalog.json` and `media/` to the live site's `data/` folder. A visitor sees it on the next page load: the site fetches the catalog without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`. The copies never change, so the server can cache `data/media/` for a year. Serve `.glb` files as `model/gltf-binary`: Nginx's default `mime.types` has no entry for them.
+**4. Publish it.** Copy `catalog.json` and `media/` to the live site's `data/` folder. When the catalog is built on the web server itself, by the sale backend or by hand, it is written there directly and there is nothing to copy. When it is built on another computer, send it to the server, `media/` first, so the new catalog never names a photo that has not arrived yet.
+
+Send the media copies first. Only new files go, since a copy never changes:
+
+```
+rsync -av <out-dir>/media/ <user>@<server>:<site-root>/data/media/
+```
+
+Then the catalog:
+
+```
+rsync -av <out-dir>/catalog.json <user>@<server>:<site-root>/data/
+```
+
+The sale backend avoids this step: it runs on the server, has the chain repository as a dependency, and rebuilds the catalog in the site's folder within about a minute of each new display topic message (see [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale), and [Running the sale backend](scripts.md#running-the-sale-backend) for how it is installed). Listing commands can still be run from any computer, since a listing is a message on the chain.
+
+A visitor sees the new catalog on the next page load: the site fetches the catalog without the browser's cached copy, and the server should send it with `Cache-Control: no-cache`. The copies never change, so the server can cache `data/media/` for a year. Serve `.glb` files as `model/gltf-binary`: Nginx's default `mime.types` has no entry for them.
 
 **5. Check on the chain.** Open the display topic on HashScan (`https://hashscan.io/testnet/topic/<display-topic-id>/messages`), or read it from the mirror node with the messages decoded:
 
@@ -327,6 +465,8 @@ The catalog is only as current as its last build. How the site catches up depend
 The browser reads only `catalog.json`: no mirror node calls when a page opens, so each visit costs one small file. The catalog stays the builder's output from the chain; nothing edits it. The backend must run where it can write the site's `data/` folder.
 
 The backend also watches the display topic, about once a minute, and rebuilds the catalog whenever a new message appears. So a sale from the command line, or a listing added or removed by script, reaches the site within about a minute, with no rebuild by hand.
+
+**Running the sale backend.** It is a Node service (`umina-achala-server`) that runs on the web server under pm2, restarted on failure and at boot, with Nginx sending the site's `/api/` path to it. Its keys are in an env file on the server, outside any repository, and `CATALOG_DIR` points at the live site's data folder, so it writes the catalog in place. The chain command line can run on the same server with the same env file. Install, Nginx, health check and update steps: [scripts.md, Running the sale backend](scripts.md#running-the-sale-backend). When it is not running, nothing rebuilds the catalog on its own: rebuild and publish it by hand (see [Commands: List, Rebuild, Check](#commands-list-rebuild-check)).
 
 **When sellers can sell outside the site** (consignment: a merchant holds the NFT and UA has an allowance), the chain can change without a display event. Then the site checks the mirror node on each page load:
 
@@ -378,7 +518,7 @@ Chain code is in `umina-achala-chain`. "On `main`" means on the `main` branch of
 | Mint: pin, mint, `COMPLIANCE` and `MINT` events, duplicate `stone_id` check | `src/mint/mintNFT.js`, `src/mint/lib.js` | On `main` (renamed from `mintUminaNFT.js`) | [chain #3](https://github.com/umina-achala/umina-achala-chain/issues/3), [#20](https://github.com/umina-achala/umina-achala-chain/issues/20) |
 | Photos: master per photo, 1080 px display version for `image`, EXIF stripped | `src/mint/images.js` | On `main` | [chain #7](https://github.com/umina-achala/umina-achala-chain/issues/7) |
 | Stone types, certified-only rules, RUC / REINFO / concession checks | `schema/stone-types.json`, `src/mint/stoneTypes.js`, `src/mint/metadataValidator.js`, `src/mint/importIma.js` | On `main` | [chain #14](https://github.com/umina-achala/umina-achala-chain/issues/14), [#5](https://github.com/umina-achala/umina-achala-chain/issues/5) |
-| Association | `src/consignment/lib.js` (`associateToken`), `src/consignment/associateToken.js` | On `main` | |
+| Association | `src/token/associate.js` (`associateToken`), `src/token/associateToken.js` | On `main` | |
 | Consignment: transfer, allowance, `ISSUED_TO_OWNER` event | `src/consignment/consignToMerchant.js` | On `main` | [chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18) |
 | Ending a consignment: revoke, return, `TRANSFER` event | `src/consignment/endConsignment.js` | On `main` | [chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18) |
 | Consigned 70 / 30 sale with `SALE` event | `src/consignment/sellConsigned.js` | On `main` | |

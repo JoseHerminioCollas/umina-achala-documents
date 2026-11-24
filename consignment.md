@@ -126,6 +126,47 @@ The fallback fee is a fixed amount, not a percentage. It cannot capture a price 
 
 A fallback fee of about USD 3 in HBAR is **decided and in the code** ([chain #1](https://github.com/umina-achala/umina-achala-chain/issues/1), [chain #6](https://github.com/umina-achala/umina-achala-chain/issues/6)): `buildRoyaltyFee` in `umina-achala-chain/src/token/lib.js` sets it from `FALLBACK_FEE_HBAR` when the token is created. `NETWORK=testnet node src/token/adminToken.js fees --fallback-hbar <hbar>` changes it later with the Fee Schedule Key ([chain #21](https://github.com/umina-achala/umina-achala-chain/issues/21)). See [nft-transfers-and-sales.md](nft-transfers-and-sales.md#when-the-royalty-is-paid).
 
+## How Allowances Work on Hedera
+
+Hedera docs: [Approve an allowance](https://docs.hedera.com/native/accounts/approve-allowance), [Delete an allowance](https://docs.hedera.com/native/accounts/adjust-allowance).
+
+An allowance is a standing permission from one account, the **owner**, to another, the **spender**, to move some of the owner's assets. Nothing moves when the allowance is granted. The assets stay in the owner's account until the spender uses the permission.
+
+### The Link Between the Two Accounts
+
+- **The owner creates it.** The owner signs an `AccountAllowanceApproveTransaction` naming the spender and what it may move. The network stores the allowance as part of the owner's account state.
+- **The spender uses it later, without the owner.** The spender builds a transfer with an approved leg (for an NFT, `addApprovedNftTransfer(nftId, owner, receiver)`). The spender must be the transaction's **payer**: the network checks the stored allowance against the payer, not a signature from the owner. The owner does not sign.
+- **It goes one way.** The spender gets no access to the owner's keys or account. It can move only what the allowance covers, and only out of the owner's account.
+- **The owner can revoke it at any time** with `AccountAllowanceDeleteTransaction`. An NFT allowance on a serial is also cleared when that NFT leaves the owner's account, whoever moves it.
+
+### Kinds of Allowance
+
+| Kind | What the spender may move |
+|---|---|
+| HBAR | Up to an amount of HBAR, reduced as the spender uses it |
+| Fungible token | Up to an amount of one token, reduced as the spender uses it |
+| NFT | Specific serials of a token, or all serials of the token (an operator-style approval) |
+
+Each allowance covers only its own asset. An NFT allowance gives the spender no access to the owner's HBAR or other tokens. In consignment, UA holds only an NFT allowance from the merchant: the buyer's HBAR moves because the buyer signs the sale, UA pays the network fee from its own account as payer, and the merchant's HBAR is never debited. Spending the owner's HBAR would take a separate HBAR allowance (`approveHbarAllowance(owner, spender, amount)`, spent with `addApprovedHbarTransfer`), which consignment does not use.
+
+### How Consignment Uses It
+
+| Step | Script | Who signs | What happens to the allowance |
+|---|---|---|---|
+| Consign | `consignment/consignToMerchant.js` | Merchant | After the Treasury sends the NFT, the merchant approves UA as spender on the serial (`approveTokenNftAllowance(nftId, merchant, ua)`) |
+| Sell | `consignment/sellConsigned.js` | UA (payer, so spender) and the buyer | UA moves the NFT to the buyer in the same transaction as the payment split. The merchant does not need to be online. The allowance is cleared because the NFT left the merchant |
+| End | `consignment/endConsignment.js` | Merchant | The merchant revokes UA's allowance (`deleteAllTokenNftAllowances`), and returns the NFT unless `--keep` is given |
+
+UA's own items (next section) need no allowance: the Treasury holds the NFT and signs the transfer itself.
+
+### Points to Keep in Mind
+
+- **An allowance does not lock anything.** The owner can still send or sell the NFT, and doing so clears the allowance. The owner can also approve other spenders (another marketplace) on the same serial.
+- **A spender cannot use it from a wallet.** Wallets offer a plain Send from the account that holds the asset. Spending an allowance needs a transaction built with an approved transfer and paid by the spender, so a backend or script has to build it (see [nft-transfers-and-sales.md](nft-transfers-and-sales.md#ua-sales-what-can-happen-in-a-wallet)).
+- **Token association still applies.** The receiver must have associated the token before the approved transfer, as with any transfer.
+- **Granting one has a cost.** The approval is a transaction with its own network fee, paid by its payer.
+- **The mirror node shows current allowances:** `GET /api/v1/accounts/<owner>/allowances/nfts` (also `/crypto` for HBAR and `/tokens` for fungible tokens). An NFT allowance for all serials shows here. One for specific serials shows as the `spender` field on each serial (`GET /api/v1/tokens/<tokenId>/nfts/<serial>`).
+
 ## UA's Own Items (No Consignment)
 
 UA can also sell specimens it owns itself. This case does not depend on the consignment decision. There is no merchant, no allowance and no split: the NFT stays in the Treasury from minting until it sells.
@@ -154,12 +195,12 @@ UA can also sell specimens it owns itself. This case does not depend on the cons
 | Payment | Buyer −100, merchant +73.68, UA +26.32 (70 / 30 after the royalty) | Buyer −100, UA +100 |
 | Signed by | UA (payer and spender), buyer | Treasury, buyer |
 | Allowance | Required | Not needed |
-| Royalty on the primary sale | Taken from the merchant's leg, part of UA's 30% | Not yet known. The Treasury is the sender; see [To Verify on Testnet](#to-verify-on-testnet) |
+| Royalty on the primary sale | Taken from the merchant's leg, part of UA's 30% | None: the Treasury is the fee collector, so neither the royalty nor the fallback fee applies (confirmed on testnet, see [To Verify on Testnet](#to-verify-on-testnet)) |
 | SentX bypass | Possible (the merchant holds the NFT) | Not possible, UA controls the NFT until it sells |
 
 Secondary sales and the fallback fee work the same in both cases ([Step 5](#step-5-secondary-sales-and-royalties), [Step 6](#step-6-fallback-fee)).
 
-**Code.** `src/sale/sellOwnItem.js <serial> <price-hbar>` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)) refuses a stone mounted in an Achala ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)), checks that the Treasury still holds the serial, then makes one atomic transfer and records `SALE`:
+**Code.** `src/sale/sellOwnItem.js <serial> <price-hbar>` ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)) refuses a stone mounted in an Achala ([chain #24](https://github.com/umina-achala/umina-achala-chain/issues/24)), checks that the Treasury still holds the serial, checks the listing and the buyer, then makes one atomic transfer, records `SALE` and posts `UNLISTED` (reason `sold`) to the display topic:
 
 ```js
 new TransferTransaction()
@@ -169,7 +210,9 @@ new TransferTransaction()
   .freezeWith(client);                             // signed by the buyer, and the Treasury if not the operator
 ```
 
-**Status.** Built and tested, on `main`; not yet run on testnet. No web checkout sells UA's own items yet ([web #116](https://github.com/umina-achala/umina-achala-web/issues/116)).
+Before sending, it warns when the item is not listed on the site or is listed at another price (an unlisted item gets `SALE` but no `UNLISTED`), and refuses a buyer who has not associated the token or holds less HBAR than the price. `--dry-run` makes the same checks.
+
+**Status.** Built, tested and run on testnet. On the website, UA's own items sell through the sale backend, which uses the same sale code (see [scripts.md](scripts.md#the-sale-backend)).
 
 ## Third-Party Marketplaces (SentX)
 
@@ -254,11 +297,12 @@ The flow above is implemented as testnet scripts in `umina-achala-chain/src`, to
 | Script | Step | What it does | Hedera calls | Signed by |
 |---|---|---|---|---|
 | `mint/mintNFT.js` | 1 | Mints a new serial to the Treasury: records `COMPLIANCE`, pins the photos and metadata, mints, records `MINT` (see [mint-nft-token.md](mint-nft-token.md#current-implementation-phase-2-testnet)) | `TopicMessageSubmitTransaction`, `TokenMintTransaction` | Supply key |
-| `consignment/associateToken.js` | 2, 4 | Associates the Umiña token, or with `--token achala` both tokens, with the merchant or buyer account | `TokenAssociateTransaction` | That account |
+| `token/associateToken.js` | 2, 4 | Associates the Umiña token, or with `--token achala` both tokens, with the merchant or buyer account | `TokenAssociateTransaction` | That account |
 | `consignment/consignToMerchant.js` | 2, 3 | Associates the merchant (skipped if already done), transfers the serial from the Treasury to the merchant, has the merchant grant UA an NFT allowance, and records `ISSUED_TO_OWNER` ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)). `--token achala`: the Achala and its stones, one transfer, one event ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)) | `TokenAssociateTransaction`, `TransferTransaction`, `AccountAllowanceApproveTransaction`, `TopicMessageSubmitTransaction` | Merchant, Treasury, merchant |
 | `consignment/sellConsigned.js` | 4 | Checks the merchant still holds the serial (mirror node), settles the 70 / 30 sale and the NFT transfer in one transaction, and records `SALE`. `--token achala`: the Achala and its stones for one payment ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)) | `TransferTransaction`, `TopicMessageSubmitTransaction` | UA (payer and allowance spender), buyer |
 | `consignment/endConsignment.js` | | Ends a consignment: checks the merchant holds the serial (mirror node), the merchant revokes UA's allowance and returns the NFT to the Treasury, and `TRANSFER` (reason `consignment_ended`) is recorded. `--keep` only revokes the allowance and records nothing ([chain #18](https://github.com/umina-achala/umina-achala-chain/issues/18)). `--token achala`: the Achala and its stones ([chain #28](https://github.com/umina-achala/umina-achala-chain/issues/28)) | `AccountAllowanceDeleteTransaction`, `TransferTransaction`, `TopicMessageSubmitTransaction` | Merchant |
-| `consignment/lib.js` | | Shared helpers: the 70 / 30 split, token association, and argument and environment checks | | |
+| `consignment/lib.js` | | Shared helpers: the 70 / 30 split, and argument and environment checks | | |
+| `token/associate.js` | | Token association, shared with the sale and transfer scripts | | |
 
 Every event goes through `src/hcs.js`, which signs it with `HCS_SUBMIT_KEY` when set and waits for the receipt ([chain #17](https://github.com/umina-achala/umina-achala-chain/issues/17)). If an event fails after the NFT has already moved, the script says so and prints the transaction ID, so it can be recorded by hand.
 
@@ -284,24 +328,37 @@ Run every command from `umina-achala-chain`. Each script takes `--dry-run`, whic
 
 ### Run Order
 
+1. Mint: prints the new serial, e.g. 7. The NFT is in the Treasury.
+
 ```bash
-# 1. Mint: prints the new serial, e.g. 7. The NFT is in the Treasury.
 NETWORK=testnet node src/mint/mintNFT.js --form testnet/chrysocolla_a.json
+```
 
-# 2. Consign: serial 7 moves to the merchant, UA may sell it, ISSUED_TO_OWNER is recorded.
+2. Consign: serial 7 moves to the merchant, UA may sell it, `ISSUED_TO_OWNER` is recorded.
+
+```bash
 NETWORK=testnet node src/consignment/consignToMerchant.js 7
+```
 
-# 3. The buyer associates the token (once per buyer account).
-NETWORK=testnet node src/consignment/associateToken.js buyer
+3. The buyer associates the token (once per buyer account).
 
-# 4. Sell for 100 HBAR: buyer -100, merchant +70, UA +30, NFT to the buyer, SALE recorded.
+```bash
+NETWORK=testnet node src/token/associateToken.js buyer
+```
+
+4. Sell for 100 HBAR: buyer −100, merchant +70, UA +30, NFT to the buyer, `SALE` recorded.
+
+```bash
 NETWORK=testnet node src/consignment/sellConsigned.js 7 100
+```
 
-# Or, if the item does not sell: revoke the allowance and return it, TRANSFER recorded.
+Or, if the item does not sell: revoke the allowance and return it, `TRANSFER` recorded.
+
+```bash
 NETWORK=testnet node src/consignment/endConsignment.js 7
 ```
 
-`NETWORK=testnet node src/consignment/associateToken.js merchant` is also available, but `consignToMerchant.js` already associates the merchant.
+`NETWORK=testnet node src/token/associateToken.js merchant` is also available, but `consignToMerchant.js` already associates the merchant.
 
 After the sale, open the sale transaction ID on HashScan to see the royalty HTS deducted from the merchant. That answers the royalty item in [To Verify on Testnet](#to-verify-on-testnet).
 
