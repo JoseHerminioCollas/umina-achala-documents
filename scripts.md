@@ -15,7 +15,7 @@ How to run the scripts in `umina-achala-chain`, what each command-line option do
 - [HCS Events](#hcs-events): the envelope, each event, the display topic, signing, reading the topic
 - [Listing](#listing): `displayEvent.js`
 - [Catalog](#catalog): `buildCatalog.js`, the site's `catalog.json`
-- [Sales](#sales): `sellOwnItem.js`, the sale backend and how to run it, `recordEvent.js`
+- [Sales](#sales): `sellOwnItem.js`, the sale backend and how to run it (on the server or locally), `recordEvent.js`
 - [Consignment](#consignment): `consignToMerchant.js`, `sellConsigned.js`, `endConsignment.js`
 - [Hedera Documentation](#hedera-documentation)
 
@@ -1127,6 +1127,55 @@ pm2 restart umina-achala-sale
 ```
 
 A pending sale does not survive a restart: the buyer gets an expired sale and starts again. When this repository gets a new release, update the service's pinned tag in the same step, so the command line and the service run the same sale code.
+
+### Running it locally
+
+To test sales on a development computer, run the service there under pm2, next to the website's dev server. The website's Vite config already sends `/api` to `127.0.0.1:8787`, so no Nginx is needed.
+
+- **Env file.** The command line's testnet env file can be used as is, with `CATALOG_DIR` set to the website's dev data folder (`frontend/public/data` in the website repository). The service writes `catalog.json` there, and the dev server serves it on the next page load.
+- **Repositories side by side.** Clone the service next to this repository and the website, then run `npm ci` in its folder.
+
+From the service's folder, start it with that env file:
+
+```
+UMINA_ACHALA_ENV_FILE=<path-to-testnet-env-file> pm2 start ecosystem.config.cjs
+```
+
+Save the process list, so `pm2 restart` finds it later:
+
+```
+pm2 save
+```
+
+From the website's folder, start the dev server:
+
+```
+npm run dev
+```
+
+Check the service the same way as on the server (`curl -s 127.0.0.1:8787/api/health` and `pm2 logs umina-achala-sale`). Its log shows a catalog build at start, and one within about a minute of each listing change, so `buildCatalog.js` does not need to be run by hand while it is up.
+
+**When `pm2 restart` says the process is not found.** pm2's process list is empty, for example after a reboot on a computer where `pm2 save` and `pm2 startup` were not run. Check the list:
+
+```
+pm2 ls
+```
+
+If `umina-achala-sale` is not in it, start it again with the `pm2 start` command above, then `pm2 save`.
+
+**Testing on an Android phone.** Connect the phone by USB with USB debugging on, and check that it shows as `device`:
+
+```
+adb devices
+```
+
+Forward the phone's port 5173 to the computer's dev server:
+
+```
+adb reverse tcp:5173 tcp:5173
+```
+
+On the phone, open `http://localhost:5173` in the browser. Use `localhost`, not the computer's network address: the forward only covers `localhost`. The phone reaches the sale service through the dev server's `/api` proxy, so port 8787 needs no forward. Run `adb reverse` again after the phone is unplugged or the adb server restarts. If the phone cannot connect, check that the dev server is running: the forward succeeds even when nothing is listening on the computer's side.
 
 ### `recordEvent.js`
 
