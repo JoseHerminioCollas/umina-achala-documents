@@ -1082,9 +1082,17 @@ pm2 startup
 ```nginx
 location /api/ {
     proxy_pass http://127.0.0.1:8787;
+    proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    add_header Cache-Control "no-store" always;
 }
 ```
+
+- No trailing slash on `proxy_pass`, so the path arrives unchanged (`/api/sale/prepare`), as the service's routes expect. With a slash, Nginx strips `/api/` and every call is a 404.
+- `X-Forwarded-For` gives the service the visitor's IP, which its rate limit counts per visitor. The service trusts only a proxy on its own machine, so a header a visitor sends cannot change it. Without this line, every visitor shares Nginx's address and one limit.
+- `Cache-Control: no-store` keeps sale and health replies out of every cache, errors included.
+- `Host` and `X-Forwarded-Proto` are not used by the service today; they keep its logs and any later redirect correct.
 
 Check the configuration, then reload Nginx:
 
