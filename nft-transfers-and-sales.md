@@ -24,6 +24,13 @@
     - [Commands: List, Rebuild, Check](#commands-list-rebuild-check)
     - [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale)
     - [Failure Behavior](#failure-behavior)
+  - [Website: Buying With HashPack](#website-buying-with-hashpack)
+    - [What the Buyer Needs](#what-the-buyer-needs)
+    - [Associating a Token in HashPack](#associating-a-token-in-hashpack)
+    - [Three Ways to Connect](#three-ways-to-connect)
+    - [Buying](#buying)
+    - [When a Purchase Stops](#when-a-purchase-stops)
+    - [HashPack on a Phone: Notes for Builders](#hashpack-on-a-phone-notes-for-builders)
   - [Open Decisions](#open-decisions)
   - [Code and Issue Reference](#code-and-issue-reference)
 
@@ -217,8 +224,8 @@ Hedera requires the payer of an allowance transfer to be the spender, so UA must
 
 What Option 1 needs:
 
-- Wallet connection (`@hashgraph/hedera-wallet-connect`) in `umina-achala-web`. The site has none yet ([web #58](https://github.com/umina-achala/umina-achala-web/issues/58)).
-- A small backend endpoint that holds UA's key and builds and signs the sale transaction. UA's key must not be in the browser. The site is currently static, so this is new infrastructure ([web #116](https://github.com/umina-achala/umina-achala-web/issues/116)).
+- Wallet connection (`@hashgraph/hedera-wallet-connect`) in `umina-achala-web`. Built for HashPack: see [Website: Buying With HashPack](#website-buying-with-hashpack) ([web #58](https://github.com/umina-achala/umina-achala-web/issues/58)).
+- A small backend endpoint that holds UA's key and builds and signs the sale transaction. UA's key must not be in the browser. Built as the sale backend, a Node service next to the static site; see [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale) ([web #116](https://github.com/umina-achala/umina-achala-web/issues/116)).
 - The sale transaction itself: `sellConsigned.js` for consigned items, and a Treasury sale for UA's own items ([chain #19](https://github.com/umina-achala/umina-achala-chain/issues/19)).
 - The buyer's account must be associated with the token, which the wallet can do.
 
@@ -485,6 +492,80 @@ Requests: `GET /api/v1/tokens/<tokenId>/nfts?limit=100` for each token (follow `
 The sale backend checks the holder (and, for a consigned item, the allowance) again before building a sale, so a stale listing cannot be sold. If the rebuild after a sale fails, the old catalog stays, and the next rebuild (after the next display topic message, or by hand) catches up.
 
 **What this does not do:** keep the seller list up to date when merchants join or leave consignment.
+
+## Website: Buying With HashPack
+
+A buyer pays for an item UA holds in the Treasury with HBAR from HashPack, on the site itself. The site never holds a key: the sale backend builds the transfer and signs UA's side, HashPack adds the buyer's signature, and the backend submits it. One transaction pays UA and moves the NFT (an Achala with its mounted stones) to the buyer, so either everything moves or nothing does.
+
+### What the Buyer Needs
+
+- HashPack: the browser extension on a computer, or the app on a phone.
+- An account on the site's network (testnet in Phase 2) with enough HBAR for the price. UA pays the network fee.
+- An account with a single ED25519 or ECDSA key. Multi-key and threshold accounts are refused.
+- The token associated with the account, or automatic token associations allowed. If neither, the purchase stops before anything moves and the site says how to fix it.
+
+### Associating a Token in HashPack
+
+On Hedera an account can receive a token only after it has accepted it: the account is **associated** with the token. The association is a transaction the account signs and pays for, about USD 0.05 in HBAR. An Achala purchase moves NFTs of both tokens (the piece and its stones), so a buyer associates both, or allows automatic associations.
+
+Associate the token by hand:
+
+1. In HashPack, switch to the account that will buy, on the site's network.
+2. Tap **NFTs** at the bottom of the screen, then **Associate NFT**.
+3. Enter the token ID where it asks to enter a token ID: the Umiña token for stones, and the Achala token too for jewelry. On testnet these are `0.0.11400486` (Umiña) and `0.0.11400589` (Achala).
+4. Approve the association. It shows in the token list once it is done.
+
+Or let the account accept tokens on its own: in the account's settings, set **automatic token associations** to a number above zero, or to unlimited.
+
+### Three Ways to Connect
+
+**Connect wallet** in the header (or the buy dialog, when no wallet is connected) opens the connect dialog. It is built on `@hashgraph/hedera-wallet-connect` (`DAppConnector`), loaded only when a visitor asks for the wallet, because it brings the Hedera SDK with it.
+
+| Where the buyer is | What they pick | Where they approve |
+|---|---|---|
+| Computer with the HashPack extension | **HashPack (browser extension)** | A HashPack window in the same browser |
+| Computer without the extension, phone at hand | **HashPack on your phone (QR code)**: the site shows a QR code, the buyer scans it in the HashPack app | The HashPack app on the phone, while the site stays on the computer |
+| Phone, in its own browser (Chrome, Safari) | **HashPack app**: the phone opens HashPack | The HashPack app, then back to the browser |
+
+The connection is kept: after a reload or on the next visit, the site restores it without asking again. **Disconnect** is in the same header menu. If HashPack connects on another network than the site's, the site disconnects it and asks the buyer to switch HashPack's network first.
+
+### Buying
+
+1. The buyer presses the card's cart button or **Buy** in the detail view. Both open the same buy dialog: the item, its price, the paying account, and for an Achala, how many stones move with it.
+2. **Confirm and pay** (or **Connect wallet and pay**, which connects first).
+3. The site asks the sale backend to prepare the sale (`POST /api/sale/prepare`). The backend checks that the item is listed at that price, held by the Treasury, not being bought by someone else, and that the buyer can receive it. It returns the transfer signed by UA, valid for about two minutes. Preparing only after Confirm means the two minutes start when the buyer is ready.
+4. The site asks HashPack to sign without sending (`hedera_signTransaction`). While it waits, it tells the buyer where to approve (the HashPack window, the HashPack app, or HashPack on the phone) and counts down the seconds left. On a phone it also shows an **Open HashPack** button.
+5. As soon as the signature comes back, the site sends it to the backend (`POST /api/sale/submit`), which checks it and submits the transaction. The buyer has nothing left to press after approving in HashPack.
+6. Done: the dialog says the NFT is in the wallet, links the transaction on HashScan, and the item disappears from the home page and the marketplace in that browser at once. The backend records `SALE`, posts `UNLISTED` (reason `sold`) and rebuilds the catalog, so other visitors see it gone on their next page load (see [Keeping the Catalog Current After a Sale](#keeping-the-catalog-current-after-a-sale)).
+
+If the countdown reaches zero, the site stops waiting and does not submit a signature that arrives late. The transaction would be refused anyway once its window closes.
+
+### When a Purchase Stops
+
+Every stop happens before the transaction reaches the network, or the network refuses it as a whole, so the buyer is told that nothing was charged and nothing moved. Where starting again can work, the dialog offers **Try again**, which prepares a new sale.
+
+| What happened | What the buyer sees | Try again |
+|---|---|---|
+| Declined in HashPack | The purchase was declined | Yes |
+| The two minutes ran out | The time to approve ran out | Yes |
+| Sold meanwhile, or no longer listed | No longer for sale; the item is hidden | No |
+| Token not associated | How to associate it in HashPack | Yes |
+| Not enough HBAR | The account does not hold enough HBAR | No |
+| Multi-key or threshold account | This account cannot be used here | No |
+| Signature does not match the prepared transfer | The signature did not match | Yes |
+| Sale backend unreachable | Check your connection | Yes |
+| Too many attempts | Wait a minute | Yes |
+
+### HashPack on a Phone: Notes for Builders
+
+- **Opening HashPack to sign.** When the buyer connects from a phone browser, WalletConnect's modal saves a deep link and, for each signing request, opens HashPack with a `wc?requestId=…` link. HashPack reads that as a new pairing ("pairing error: missing or invalid pair() uri#relay-protocol") and the request never shows. The site removes the saved link (`WALLETCONNECT_DEEPLINK_CHOICE` in local storage) and opens HashPack with its plain app link, `hashpack://`, which brings the app to the front with the request waiting.
+- **Open the app after the request is sent, not before.** The site waits for WalletConnect's `session_request_sent` event before opening HashPack. If the browser goes to the background first, Chrome can pause the page before the request leaves.
+- **Paired by QR code, the phone may not notify.** With HashPack in the background, no notification appeared; the request was there when HashPack was opened. The dialog says so ("If it isn't showing, refresh HashPack").
+- **HashPack does not refresh an open NFT list.** After a sale, both the buyer and the Treasury had to refresh HashPack to see the transfer. The done message says so.
+- **Network shown versus network signed.** HashPack signs for the session's network (testnet) even while the app shows mainnet.
+- **"Network Fee: Infinity HBAR".** HashPack's approval screen shows this because the buyer is not the payer: UA pays the fee (about 0.04 HBAR on testnet, as HashScan shows).
+- **Two minutes is tight** when the buyer has to switch apps or look for the request.
+- **The WalletConnect project ID is public.** It ships in the site's code. Reown accepts it only on the domains on its allowlist (and localhost), and the app metadata `url` must be the page's own origin, or HashPack refuses the request.
 
 ## Open Decisions
 
