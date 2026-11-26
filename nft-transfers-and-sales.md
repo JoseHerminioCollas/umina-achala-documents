@@ -542,15 +542,19 @@ If the countdown reaches zero, the site stops waiting and does not submit a sign
 
 ### When a Purchase Stops
 
-Every stop happens before the transaction reaches the network, or the network refuses it as a whole, so the buyer is told that nothing was charged and nothing moved. Where starting again can work, the dialog offers **Try again**, which prepares a new sale.
+Every stop happens before the transaction reaches the network, or the network refuses it as a whole, so the buyer is told that nothing was charged and nothing moved. Where starting again can work, the dialog offers **Try again**, which prepares a new sale. A buyer who starts again (after declining, or from another tab) replaces their own pending sale, so they are not told the item is being bought by someone else.
+
+The sale backend checks what it can before anything is signed: the listing, the holder, the buyer's key, association and HBAR balance. A transfer the network refuses still costs its fee, and UA is the payer, so a check left to the network would let anyone make UA pay fees.
 
 | What happened | What the buyer sees | Try again |
 |---|---|---|
 | Declined in HashPack | The purchase was declined | Yes |
 | The two minutes ran out | The time to approve ran out | Yes |
+| Started again in another window or tab, and the older request approved | Approve the newest request in HashPack and decline this one | No |
 | Sold meanwhile, or no longer listed | No longer for sale; the item is hidden | No |
+| Another buyer is completing a purchase of it | Someone is buying it; it is still for sale; try again in about N seconds (when that buyer's two minutes end) | Yes |
 | Token not associated | How to associate it in HashPack | Yes |
-| Not enough HBAR | The account does not hold enough HBAR | No |
+| Not enough HBAR | The account does not hold enough HBAR. Checked before HashPack is asked to sign | No |
 | Multi-key or threshold account | This account cannot be used here | No |
 | Signature does not match the prepared transfer | The signature did not match | Yes |
 | Sale backend unreachable | Check your connection | Yes |
@@ -565,6 +569,8 @@ Every stop happens before the transaction reaches the network, or the network re
 - **Network shown versus network signed.** HashPack signs for the session's network (testnet) even while the app shows mainnet.
 - **"Network Fee: Infinity HBAR".** HashPack's approval screen shows this because the buyer is not the payer: UA pays the fee (about 0.04 HBAR on testnet, as HashScan shows).
 - **Two minutes is tight** when the buyer has to switch apps or look for the request.
+- **The countdown matches the backend.** While a sale waits for the buyer's signature, the backend holds the item for that sale's two minutes. The site rounds the seconds left up, so its countdown reaches zero when the backend lets the item go.
+- **HashPack can say "done" for a refused transfer.** After the buyer approved a transfer that the network then refused, HashPack showed it as done. Trust the site's message and HashScan.
 - **The WalletConnect project ID is public.** It ships in the site's code. Reown accepts it only on the domains on its allowlist (and localhost), and the app metadata `url` must be the page's own origin, or HashPack refuses the request.
 
 ## Open Decisions
