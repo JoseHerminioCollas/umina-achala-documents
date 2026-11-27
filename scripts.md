@@ -894,7 +894,7 @@ Checks before anything is sent, also on `--dry-run`:
 
 - The item has a `MINT` on the provenance topic; the event's `stone_id` comes from it.
 - `listed` refuses an Umiña mounted in an Achala that still exists: it is sold with its Achala, which is listed as one item at one price. A stone listed before it was mounted can still be unlisted.
-- The Treasury holds the NFT now and it is not burned (mirror node).
+- The NFT exists on the mirror node. For `listed`, the Treasury holds it now and it is not burned. `unlisted` only clears a listing, so it also works for an item already sold: after a sale whose `UNLISTED` failed, `unlisted <serial> --reason sold` posts it.
 - `listed` at the same price as now is refused (nothing would change); `unlisted` of an item that is not listed is refused.
 
 Example: list agate A (Umiña serial 15) and the gold Achala G (Achala serial 5), change a price, take one off, and check:
@@ -1045,7 +1045,9 @@ The sale backend is a plain Node process that runs **on the web server**, next t
 - **It writes the catalog in place.** `CATALOG_DIR` in the env file is the live site's data folder (it must exist). The service rebuilds `catalog.json` there once at start, after each sale on the site, and within about a minute of each new display topic message. Nothing needs to be copied to the server.
 - **The command line can run there too.** With this repository cloned on the same server and the same env file, listings, mints and manual catalog builds also happen next to the site. A listing made from any computer still reaches the site, since it is a message on the chain that the service reads.
 
-The env file needs `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID` (and `TREASURY_KEY` when the Treasury is not the operator), `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID`, `HCS_TOPIC_ID`, `HCS_DISPLAY_TOPIC_ID` (and `HCS_SUBMIT_KEY` when the topics have a submit key), and `CATALOG_DIR`.
+The env file needs `OPERATOR_ID`, `OPERATOR_KEY`, `TREASURY_ID` (and `TREASURY_KEY` when the Treasury is not the operator), `UMINA_TOKEN_ID`, `ACHALA_TOKEN_ID`, `HCS_TOPIC_ID`, `HCS_DISPLAY_TOPIC_ID` (and `HCS_SUBMIT_KEY` when the topics have a submit key that is not the operator key), and `CATALOG_DIR`. Copy only these: the backend needs no buyer, supply or admin key. `CATALOG_DIR` is a path on the server, not the one in a development env file.
+
+At start the backend reads both topics from the mirror node and refuses to start when it could not post to them (a submit key it does not have, or a topic that is gone), naming the topic. Without that check, a missing `HCS_SUBMIT_KEY` would show only after a sale had settled, when its `SALE` and `UNLISTED` fail with `INVALID_SIGNATURE`. If the mirror node does not answer at start, it only warns and starts.
 
 **First install**, on the server. Get the service:
 
